@@ -37,8 +37,8 @@ app.get('/api/races', (req, res) => {
 });
 
 app.get('/api/nextrace', (req, res) => {
-  // Get the race with the earliest upcoming datetime
-  db.get('SELECT * FROM races WHERE datetime >= ? ORDER BY datetime ASC LIMIT 1', 
+  // Get the race with the earliest upcoming race datetime
+  db.get('SELECT * FROM races WHERE datetime_race >= ? ORDER BY datetime_race ASC LIMIT 1', 
     [Math.floor(Date.now() / 1000)], // Current timestamp
     (err, row) => {
       if (err) {
@@ -65,13 +65,43 @@ app.get('/api/races/:id', (req, res) => {
 
 // Add a new race
 app.post('/api/races', (req, res) => {
-  const { name, location, datetime } = req.body;
-  if (!name || !location || !datetime) {
-    return res.status(400).json({ error: 'Please provide name, location, and datetime' });
+  const { 
+    name, 
+    location, 
+    datetime_fp1, 
+    datetime_fp2, 
+    datetime_fp3, 
+    datetime_sprint, 
+    datetime_qualifying, 
+    datetime_race 
+  } = req.body;
+  
+  if (!name || !location || !datetime_race) {
+    return res.status(400).json({ error: 'Please provide name, location, and race datetime at minimum' });
   }
   
-  db.run('INSERT INTO races (name, location, datetime) VALUES (?, ?, ?)',
-    [name, location, datetime],
+  db.run(`INSERT INTO races (
+            name, 
+            location, 
+            datetime, 
+            datetime_fp1, 
+            datetime_fp2, 
+            datetime_fp3, 
+            datetime_sprint, 
+            datetime_qualifying, 
+            datetime_race
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      name, 
+      location, 
+      datetime_race, // Keep datetime field updated for backward compatibility
+      datetime_fp1 || null, 
+      datetime_fp2 || null, 
+      datetime_fp3 || null, 
+      datetime_sprint || null, 
+      datetime_qualifying || null, 
+      datetime_race
+    ],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -80,20 +110,57 @@ app.post('/api/races', (req, res) => {
         id: this.lastID,
         name,
         location,
-        datetime
+        datetime: datetime_race,
+        datetime_fp1,
+        datetime_fp2,
+        datetime_fp3,
+        datetime_sprint,
+        datetime_qualifying,
+        datetime_race
       });
     });
 });
 
 // Update a race
 app.put('/api/races/:id', (req, res) => {
-  const { name, location, datetime } = req.body;
-  if (!name || !location || !datetime) {
-    return res.status(400).json({ error: 'Please provide name, location, and datetime' });
+  const { 
+    name, 
+    location, 
+    datetime_fp1, 
+    datetime_fp2, 
+    datetime_fp3, 
+    datetime_sprint, 
+    datetime_qualifying, 
+    datetime_race 
+  } = req.body;
+  
+  if (!name || !location || !datetime_race) {
+    return res.status(400).json({ error: 'Please provide name, location, and race datetime at minimum' });
   }
   
-  db.run('UPDATE races SET name = ?, location = ?, datetime = ? WHERE id = ?',
-    [name, location, datetime, req.params.id],
+  db.run(`UPDATE races SET 
+            name = ?, 
+            location = ?, 
+            datetime = ?,
+            datetime_fp1 = ?, 
+            datetime_fp2 = ?, 
+            datetime_fp3 = ?, 
+            datetime_sprint = ?, 
+            datetime_qualifying = ?, 
+            datetime_race = ? 
+          WHERE id = ?`,
+    [
+      name, 
+      location, 
+      datetime_race, // Keep datetime field updated for backward compatibility
+      datetime_fp1 || null, 
+      datetime_fp2 || null, 
+      datetime_fp3 || null, 
+      datetime_sprint || null, 
+      datetime_qualifying || null, 
+      datetime_race,
+      req.params.id
+    ],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -105,7 +172,13 @@ app.put('/api/races/:id', (req, res) => {
         id: parseInt(req.params.id),
         name,
         location,
-        datetime
+        datetime: datetime_race,
+        datetime_fp1,
+        datetime_fp2,
+        datetime_fp3,
+        datetime_sprint,
+        datetime_qualifying,
+        datetime_race
       });
     });
 });
