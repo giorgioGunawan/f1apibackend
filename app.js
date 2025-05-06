@@ -30,7 +30,12 @@ async function fetchRaces() {
                 <td>${race.id}</td>
                 <td>${race.name}</td>
                 <td>${race.location}</td>
-                <td>${formatDate(race.datetime)}</td>
+                <td>${race.datetime_fp1 ? formatDate(race.datetime_fp1) : 'N/A'}</td>
+                <td>${race.datetime_fp2 ? formatDate(race.datetime_fp2) : 'N/A'}</td>
+                <td>${race.datetime_fp3 ? formatDate(race.datetime_fp3) : 'N/A'}</td>
+                <td>${race.datetime_sprint ? formatDate(race.datetime_sprint) : 'N/A'}</td>
+                <td>${race.datetime_qualifying ? formatDate(race.datetime_qualifying) : 'N/A'}</td>
+                <td>${race.datetime_race ? formatDate(race.datetime_race) : 'N/A'}</td>
                 <td>
                     <button class="delete-btn" data-id="${race.id}" data-name="${race.name}">Delete</button>
                 </td>
@@ -45,7 +50,7 @@ async function fetchRaces() {
     } catch (error) {
         console.error('Error fetching races:', error);
         document.getElementById('races-table-body').innerHTML = 
-            `<tr><td colspan="5">Error loading races: ${error.message}</td></tr>`;
+            `<tr><td colspan="10">Error loading races: ${error.message}</td></tr>`;
     }
 }
 
@@ -126,42 +131,6 @@ async function addRace(event) {
         
     } catch (error) {
         console.error('Error adding race:', error);
-        formMessage.className = 'error';
-        formMessage.textContent = `Error: ${error.message}`;
-    }
-}
-
-// Handle race deletion
-async function handleDeleteRace(event) {
-    const raceId = event.target.dataset.id;
-    const raceName = event.target.dataset.name;
-    
-    if (!confirm(`Are you sure you want to delete the race "${raceName}"?`)) {
-        return; // User cancelled the deletion
-    }
-    
-    try {
-        const response = await fetch(`${API_URL}/api/races/${raceId}`, {
-            method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to delete race');
-        }
-        
-        // Show success message
-        const formMessage = document.getElementById('form-message');
-        formMessage.className = 'success';
-        formMessage.textContent = `Race "${raceName}" deleted successfully!`;
-        
-        // Refresh race lists
-        fetchRaces();
-        fetchNextRace();
-        
-    } catch (error) {
-        console.error('Error deleting race:', error);
-        const formMessage = document.getElementById('form-message');
         formMessage.className = 'error';
         formMessage.textContent = `Error: ${error.message}`;
     }

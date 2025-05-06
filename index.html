@@ -37,6 +37,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 0.9em;
         }
         th, td {
             padding: 12px;
@@ -101,6 +102,21 @@
         .delete-btn:hover {
             background-color: #d50000;
         }
+
+        .races-container {
+            overflow-x: auto; /* Allows horizontal scrolling for wide tables */
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .races-container, .form-container {
+                flex: none;
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -120,13 +136,18 @@
                         <th>ID</th>
                         <th>Name</th>
                         <th>Location</th>
-                        <th>Date & Time</th>
+                        <th>FP1</th>
+                        <th>FP2</th>
+                        <th>FP3</th>
+                        <th>Sprint</th>
+                        <th>Qualifying</th>
+                        <th>Race</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="races-table-body">
                     <tr>
-                        <td colspan="5">Loading races...</td>
+                        <td colspan="10">Loading races...</td>
                     </tr>
                 </tbody>
             </table>
@@ -141,8 +162,23 @@
                 <label for="location">Location:</label>
                 <input type="text" id="location" name="location" required>
                 
-                <label for="datetime">Date & Time:</label>
-                <input type="datetime-local" id="datetime" name="datetime" required>
+                <label for="datetime_fp1">Practice 1:</label>
+                <input type="datetime-local" id="datetime_fp1" name="datetime_fp1">
+                
+                <label for="datetime_fp2">Practice 2:</label>
+                <input type="datetime-local" id="datetime_fp2" name="datetime_fp2">
+                
+                <label for="datetime_fp3">Practice 3:</label>
+                <input type="datetime-local" id="datetime_fp3" name="datetime_fp3">
+                
+                <label for="datetime_sprint">Sprint:</label>
+                <input type="datetime-local" id="datetime_sprint" name="datetime_sprint">
+                
+                <label for="datetime_qualifying">Qualifying:</label>
+                <input type="datetime-local" id="datetime_qualifying" name="datetime_qualifying">
+                
+                <label for="datetime_race">Race (required):</label>
+                <input type="datetime-local" id="datetime_race" name="datetime_race" required>
                 
                 <button type="submit">Add Race</button>
             </form>
