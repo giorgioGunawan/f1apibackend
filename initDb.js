@@ -2,10 +2,10 @@ const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 
 // Check if database file already exists
-const dbExists = fs.existsSync('./f1races.db');
+const dbExists = fs.existsSync('./data/f1races.db');
 
 // Create a new database or open existing
-const db = new sqlite3.Database('./f1races.db', (err) => {
+const db = new sqlite3.Database('./data/f1races.db', (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
     process.exit(1);
@@ -15,121 +15,62 @@ const db = new sqlite3.Database('./f1races.db', (err) => {
 
 // Create tables and insert sample data only if the database is new
 if (!dbExists) {
-  // Run database initialization
-  db.serialize(() => {
-    // Create races table with all session time fields
-    db.run(`CREATE TABLE races (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      location TEXT NOT NULL,
-      datetime INTEGER NOT NULL,
-      datetime_fp1 INTEGER,
-      datetime_fp2 INTEGER,
-      datetime_fp3 INTEGER,
-      datetime_sprint INTEGER,
-      datetime_qualifying INTEGER,
-      datetime_race INTEGER NOT NULL
-    )`, (err) => {
-      if (err) {
-        console.error('Error creating races table:', err.message);
-        return;
-      }
-      console.log('Races table created successfully');
-
-      // Insert sample data with session times
-      const now = Math.floor(Date.now() / 1000);
-      const oneDay = 24 * 60 * 60; // seconds in a day
+    db.serialize(() => {
+        db.run(`CREATE TABLE IF NOT EXISTS races (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          round INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          location TEXT NOT NULL,
+          datetime_fp1 INTEGER,
+          datetime_fp2 INTEGER,
+          datetime_fp3 INTEGER,
+          datetime_sprint INTEGER,
+          datetime_qualifying INTEGER,
+          datetime_race INTEGER,
+          first_place TEXT,
+          second_place TEXT,
+          third_place TEXT
+        )`);
       
-      // Sample race 1 - Past race
-      const pastRace = now - (7 * oneDay); // 7 days ago
-      db.run(`INSERT INTO races (
-        name, 
-        location, 
-        datetime, 
-        datetime_fp1, 
-        datetime_fp2, 
-        datetime_fp3, 
-        datetime_qualifying, 
-        datetime_race
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        'Monaco Grand Prix', 
-        'Monte Carlo, Monaco', 
-        pastRace,
-        pastRace - (3 * oneDay), // FP1: 3 days before race
-        pastRace - (3 * oneDay) + (4 * 3600), // FP2: 4 hours after FP1
-        pastRace - (2 * oneDay), // FP3: 2 days before race
-        pastRace - (1 * oneDay), // Qualifying: 1 day before race
-        pastRace // Race day
-      ], (err) => {
-        if (err) {
-          console.error('Error inserting past race:', err.message);
-        } else {
-          console.log('Past race inserted successfully');
-        }
-      });
+        db.run(`CREATE TABLE IF NOT EXISTS results (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          race_id INTEGER NOT NULL,
+          session_type TEXT NOT NULL, -- e.g. 'fp1', 'qualifying', 'race'
+          position INTEGER NOT NULL, -- from 1 to 20
+          driver_name TEXT,
+          team_name TEXT,
+          time TEXT,
+          laps INTEGER,
+          points INTEGER,
+          FOREIGN KEY(race_id) REFERENCES races(id)
+        )`);
       
-      // Sample race 2 - Upcoming race (sprint weekend)
-      const upcomingRace = now + (14 * oneDay); // 14 days in future
-      db.run(`INSERT INTO races (
-        name, 
-        location, 
-        datetime, 
-        datetime_fp1, 
-        datetime_fp2, 
-        datetime_sprint, 
-        datetime_qualifying, 
-        datetime_race
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        'British Grand Prix', 
-        'Silverstone, United Kingdom', 
-        upcomingRace,
-        upcomingRace - (3 * oneDay), // FP1: 3 days before race
-        upcomingRace - (2 * oneDay), // FP2: 2 days before race
-        upcomingRace - (1 * oneDay) + (5 * 3600), // Sprint: 5 hours after qualifying
-        upcomingRace - (1 * oneDay), // Qualifying: 1 day before race
-        upcomingRace // Race day
-      ], (err) => {
-        if (err) {
-          console.error('Error inserting upcoming race:', err.message);
-        } else {
-          console.log('Upcoming race inserted successfully');
-        }
-      });
+        db.run(`CREATE TABLE IF NOT EXISTS driver_standings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          driver_name TEXT NOT NULL,
+          team_name TEXT,
+          points INTEGER DEFAULT 0
+        )`);
       
-      // Sample race 3 - Future race (standard weekend)
-      const futureRace = now + (30 * oneDay); // 30 days in future
-      db.run(`INSERT INTO races (
-        name, 
-        location, 
-        datetime, 
-        datetime_fp1, 
-        datetime_fp2, 
-        datetime_fp3, 
-        datetime_qualifying, 
-        datetime_race
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        'Hungarian Grand Prix', 
-        'Budapest, Hungary', 
-        futureRace,
-        futureRace - (3 * oneDay), // FP1: 3 days before race
-        futureRace - (3 * oneDay) + (4 * 3600), // FP2: 4 hours after FP1
-        futureRace - (2 * oneDay), // FP3: 2 days before race
-        futureRace - (1 * oneDay), // Qualifying: 1 day before race
-        futureRace // Race day
-      ], (err) => {
-        if (err) {
-          console.error('Error inserting future race:', err.message);
-        } else {
-          console.log('Future race inserted successfully');
-        }
+        db.run(`CREATE TABLE IF NOT EXISTS constructor_standings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          constructor_name TEXT NOT NULL,
+          points INTEGER DEFAULT 0
+        )`);
+      
+        db.run(`CREATE TABLE IF NOT EXISTS live_race (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          driver_name TEXT,
+          team_name TEXT,
+          car_number INTEGER,
+          position INTEGER,
+          time_behind TEXT,
+          current_lap INTEGER,
+          is_dnf BOOLEAN DEFAULT 0
+        )`);
+      
+        console.log('All tables created successfully.');
       });
-    });
-  });
-
-  console.log('Database initialization completed');
 } else {
   console.log('Database already exists, skipping initialization');
 }

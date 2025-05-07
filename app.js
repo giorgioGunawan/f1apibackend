@@ -1,290 +1,848 @@
-const API_URL = 'https://f1apibackend-1.onrender.com';
+document.addEventListener('DOMContentLoaded', function() {
+    // API base URL
+    const API_BASE_URL = 'http://localhost:3000/api';
 
-// Format timestamp to readable date in UTC
-function formatDate(timestamp) {
-    const date = new Date(timestamp * 1000);
-    return date.toUTCString();
-}
+    // Navigation
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
+    const sections = document.querySelectorAll('.section');
 
-// Convert datetime-local to Unix timestamp
-function dateTimeToTimestamp(dateTimeString) {
-    const date = new Date(dateTimeString);
-    return Math.floor(date.getTime() / 1000);
-}
+    menuItems.forEach(item => {
+        item.addEventListener('click', function() {
+            // Remove active class from all menu items and sections
+            menuItems.forEach(mi => mi.classList.remove('active'));
+            sections.forEach(section => section.classList.remove('active'));
 
-// Convert timestamp to datetime-local format for form inputs
-function timestampToDateTimeLocal(timestamp) {
-    if (!timestamp) return '';
-    const date = new Date(timestamp * 1000);
-    // Format: YYYY-MM-DDThh:mm
-    return date.toISOString().slice(0, 16);
-}
+            // Add active class to clicked menu item and corresponding section
+            this.classList.add('active');
+            const sectionId = this.getAttribute('data-section');
+            document.getElementById(sectionId).classList.add('active');
 
-// Fetch all races
-async function fetchRaces() {
-    try {
-        const response = await fetch(`${API_URL}/api/races`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch races');
-        }
-        const races = await response.json();
-        
-        const tableBody = document.getElementById('races-table-body');
-        tableBody.innerHTML = '';
-        
-        races.forEach(race => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${race.id}</td>
-                <td>${race.name}</td>
-                <td>${race.location}</td>
-                <td>${race.datetime_fp1 ? formatDate(race.datetime_fp1) : 'N/A'}</td>
-                <td>${race.datetime_fp2 ? formatDate(race.datetime_fp2) : 'N/A'}</td>
-                <td>${race.datetime_fp3 ? formatDate(race.datetime_fp3) : 'N/A'}</td>
-                <td>${race.datetime_sprint ? formatDate(race.datetime_sprint) : 'N/A'}</td>
-                <td>${race.datetime_qualifying ? formatDate(race.datetime_qualifying) : 'N/A'}</td>
-                <td>${race.datetime_race ? formatDate(race.datetime_race) : 'N/A'}</td>
-                <td>
-                    <button class="edit-btn" data-id="${race.id}">Edit</button>
-                    <button class="delete-btn" data-id="${race.id}" data-name="${race.name}">Delete</button>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-        
-        // Add event listeners to buttons
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', handleEditRace);
-        });
-        
-        document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', handleDeleteRace);
-        });
-    } catch (error) {
-        console.error('Error fetching races:', error);
-        document.getElementById('races-table-body').innerHTML = 
-            `<tr><td colspan="10">Error loading races: ${error.message}</td></tr>`;
-    }
-}
-
-// Fetch next race
-async function fetchNextRace() {
-    try {
-        const response = await fetch(`${API_URL}/api/nextrace`);
-        const nextRaceElement = document.getElementById('next-race-details');
-        
-        if (response.status === 404) {
-            nextRaceElement.innerHTML = 'No upcoming races scheduled.';
-            return;
-        }
-        
-        if (!response.ok) {
-            throw new Error('Failed to fetch next race');
-        }
-        
-        const race = await response.json();
-        nextRaceElement.innerHTML = `
-            <p><strong>${race.name}</strong></p>
-            <p>Location: ${race.location}</p>
-            <p>Date & Time: ${formatDate(race.datetime_race)}</p>
-        `;
-    } catch (error) {
-        console.error('Error fetching next race:', error);
-        document.getElementById('next-race-details').innerHTML = 
-            `Error loading next race: ${error.message}`;
-    }
-}
-
-// Open modal
-function openModal() {
-    document.getElementById('race-modal').style.display = 'block';
-}
-
-// Close modal
-function closeModal() {
-    document.getElementById('race-modal').style.display = 'none';
-    resetForm();
-}
-
-// Handle edit race button click
-async function handleEditRace(event) {
-    const raceId = event.target.dataset.id;
-    
-    try {
-        const response = await fetch(`${API_URL}/api/races/${raceId}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch race details');
-        }
-        
-        const race = await response.json();
-        
-        // Switch form to edit mode
-        document.getElementById('form-title').textContent = 'Edit Race';
-        document.getElementById('race-form').dataset.mode = 'edit';
-        document.getElementById('race-form').dataset.raceId = raceId;
-        
-        // Fill form with race data
-        document.getElementById('name').value = race.name;
-        document.getElementById('location').value = race.location;
-        document.getElementById('datetime_fp1').value = race.datetime_fp1 ? timestampToDateTimeLocal(race.datetime_fp1) : '';
-        document.getElementById('datetime_fp2').value = race.datetime_fp2 ? timestampToDateTimeLocal(race.datetime_fp2) : '';
-        document.getElementById('datetime_fp3').value = race.datetime_fp3 ? timestampToDateTimeLocal(race.datetime_fp3) : '';
-        document.getElementById('datetime_sprint').value = race.datetime_sprint ? timestampToDateTimeLocal(race.datetime_sprint) : '';
-        document.getElementById('datetime_qualifying').value = race.datetime_qualifying ? timestampToDateTimeLocal(race.datetime_qualifying) : '';
-        document.getElementById('datetime_race').value = race.datetime_race ? timestampToDateTimeLocal(race.datetime_race) : '';
-        
-        // Change button text
-        document.getElementById('form-submit-btn').textContent = 'Update Race';
-        
-        // Open modal
-        openModal();
-        
-    } catch (error) {
-        console.error('Error fetching race details:', error);
-        alert(`Error: ${error.message}`);
-    }
-}
-
-// Handle delete race
-async function handleDeleteRace(event) {
-    const raceId = event.target.dataset.id;
-    const raceName = event.target.dataset.name;
-    
-    if (confirm(`Are you sure you want to delete "${raceName}"?`)) {
-        try {
-            const response = await fetch(`${API_URL}/api/races/${raceId}`, {
-                method: 'DELETE'
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to delete race');
+            // Load data for the selected section
+            switch(sectionId) {
+                case 'races':
+                    loadRaces();
+                    break;
+                case 'results':
+                    loadResults();
+                    break;
+                case 'driver-standings':
+                    loadDriverStandings();
+                    break;
+                case 'constructor-standings':
+                    loadConstructorStandings();
+                    break;
+                case 'live-race':
+                    loadLiveRace();
+                    break;
             }
-            
-            // Refresh race lists
-            fetchRaces();
-            fetchNextRace();
-            
-        } catch (error) {
-            console.error('Error deleting race:', error);
-            alert(`Error: ${error.message}`);
+        });
+    });
+
+    // Modal handling
+    const modals = document.querySelectorAll('.modal');
+    const closeButtons = document.querySelectorAll('.close-modal');
+
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = 'block';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    closeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            modal.style.display = 'none';
+        });
+    });
+
+    window.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
         }
-    }
-}
+    });
 
-// Reset form to add mode
-function resetForm() {
-    document.getElementById('form-title').textContent = 'Add New Race';
-    document.getElementById('race-form').dataset.mode = 'add';
-    document.getElementById('race-form').reset();
-    document.getElementById('form-submit-btn').textContent = 'Add Race';
-    document.getElementById('form-message').className = '';
-    document.getElementById('form-message').textContent = '';
-}
-
-// Handle form submission (both add and edit)
-async function handleFormSubmit(event) {
-    event.preventDefault();
-    
-    const formMessage = document.getElementById('form-message');
-    formMessage.className = '';
-    formMessage.textContent = '';
-    
-    const name = document.getElementById('name').value;
-    const location = document.getElementById('location').value;
-    const datetime_fp1 = document.getElementById('datetime_fp1').value ? dateTimeToTimestamp(document.getElementById('datetime_fp1').value) : null;
-    const datetime_fp2 = document.getElementById('datetime_fp2').value ? dateTimeToTimestamp(document.getElementById('datetime_fp2').value) : null;
-    const datetime_fp3 = document.getElementById('datetime_fp3').value ? dateTimeToTimestamp(document.getElementById('datetime_fp3').value) : null;
-    const datetime_sprint = document.getElementById('datetime_sprint').value ? dateTimeToTimestamp(document.getElementById('datetime_sprint').value) : null;
-    const datetime_qualifying = document.getElementById('datetime_qualifying').value ? dateTimeToTimestamp(document.getElementById('datetime_qualifying').value) : null;
-    const datetime_race = document.getElementById('datetime_race').value ? dateTimeToTimestamp(document.getElementById('datetime_race').value) : null;
-    
-    if (!name || !location || !datetime_race) {
-        formMessage.className = 'error';
-        formMessage.textContent = 'Please fill in all required fields';
-        return;
+    // Helper functions
+    function formatDateTime(timestamp) {
+        if (!timestamp) return 'N/A';
+        const date = new Date(timestamp * 1000);
+        return date.toLocaleString();
     }
-    
-    const raceData = { 
-        name, 
-        location, 
-        datetime_fp1, 
-        datetime_fp2, 
-        datetime_fp3, 
-        datetime_sprint, 
-        datetime_qualifying, 
-        datetime_race 
-    };
-    
-    const isEditMode = document.getElementById('race-form').dataset.mode === 'edit';
-    const raceId = document.getElementById('race-form').dataset.raceId;
-    
-    try {
-        const url = isEditMode 
-            ? `${API_URL}/api/races/${raceId}` 
-            : `${API_URL}/api/races`;
-            
-        const method = isEditMode ? 'PUT' : 'POST';
+
+    function formatDateTimeForInput(timestamp) {
+        if (!timestamp) return '';
+        const date = new Date(timestamp * 1000);
+        return date.toISOString().slice(0, 16);
+    }
+
+    function timestampFromInput(dateTimeString) {
+        if (!dateTimeString) return null;
+        return Math.floor(new Date(dateTimeString).getTime() / 1000);
+    }
+
+    function showAlert(message, type = 'success') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
         
-        const response = await fetch(url, {
+        const mainContent = document.querySelector('.main-content');
+        mainContent.insertBefore(alertDiv, mainContent.firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 3000);
+    }
+
+    // ===== RACES =====
+    const racesTable = document.getElementById('races-table').querySelector('tbody');
+    const raceForm = document.getElementById('race-form');
+
+    // Load races
+    function loadRaces() {
+        fetch(`${API_BASE_URL}/races`)
+            .then(response => response.json())
+            .then(races => {
+                racesTable.innerHTML = races.length ? '' : '<tr><td colspan="7">No races found</td></tr>';
+                
+                races.forEach(race => {
+                    const row = document.createElement('tr');
+                    let podiumInfo = 'Not completed';
+                    if (race.first_place) {
+                        podiumInfo = `1. ${race.first_place}<br>2. ${race.second_place}<br>3. ${race.third_place}`;
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${race.id}</td>
+                        <td>${race.round || 'N/A'}</td>
+                        <td>${race.name}</td>
+                        <td>${race.location}</td>
+                        <td>${formatDateTime(race.datetime_race)}</td>
+                        <td>${podiumInfo}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-info edit-race" data-id="${race.id}">Edit</button>
+                            <button class="btn btn-danger delete-race" data-id="${race.id}">Delete</button>
+                        </td>
+                    `;
+                    racesTable.appendChild(row);
+                });
+
+                // Add event listeners to buttons
+                attachRaceButtonListeners();
+            })
+            .catch(error => {
+                console.error('Error loading races:', error);
+                showAlert('Error loading races', 'danger');
+            });
+    }
+
+    function attachRaceButtonListeners() {
+        document.querySelectorAll('.edit-race').forEach(button => {
+            button.addEventListener('click', function() {
+                const raceId = this.getAttribute('data-id');
+                editRace(raceId);
+            });
+        });
+
+        document.querySelectorAll('.delete-race').forEach(button => {
+            button.addEventListener('click', function() {
+                const raceId = this.getAttribute('data-id');
+                if (confirm('Are you sure you want to delete this race?')) {
+                    deleteRace(raceId);
+                }
+            });
+        });
+    }
+
+    // Add race
+    document.getElementById('add-race-btn').addEventListener('click', () => {
+        raceForm.reset();
+        document.getElementById('race-id').value = '';
+        document.getElementById('race-form-title').textContent = 'Add Race';
+        document.getElementById('race-submit-btn').textContent = 'Add Race';
+        openModal('race-modal');
+    });
+
+    // Edit race
+    function editRace(raceId) {
+        fetch(`${API_BASE_URL}/races/${raceId}`)
+            .then(response => response.json())
+            .then(race => {
+                document.getElementById('race-id').value = race.id;
+                document.getElementById('race-round').value = race.round || '';
+                document.getElementById('race-name').value = race.name;
+                document.getElementById('race-location').value = race.location;
+                document.getElementById('race-fp1').value = formatDateTimeForInput(race.datetime_fp1);
+                document.getElementById('race-fp2').value = formatDateTimeForInput(race.datetime_fp2);
+                document.getElementById('race-fp3').value = formatDateTimeForInput(race.datetime_fp3);
+                document.getElementById('race-sprint').value = formatDateTimeForInput(race.datetime_sprint);
+                document.getElementById('race-qualifying').value = formatDateTimeForInput(race.datetime_qualifying);
+                document.getElementById('race-race').value = formatDateTimeForInput(race.datetime_race);
+                document.getElementById('race-first').value = race.first_place || '';
+                document.getElementById('race-second').value = race.second_place || '';
+                document.getElementById('race-third').value = race.third_place || '';
+                
+                document.getElementById('race-form-title').textContent = 'Edit Race';
+                document.getElementById('race-submit-btn').textContent = 'Update Race';
+                openModal('race-modal');
+            })
+            .catch(error => {
+                console.error('Error loading race:', error);
+                showAlert('Error loading race details', 'danger');
+            });
+    }
+
+    // Delete race
+    function deleteRace(raceId) {
+        fetch(`${API_BASE_URL}/races/${raceId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(() => {
+            loadRaces();
+            showAlert('Race deleted successfully');
+        })
+        .catch(error => {
+            console.error('Error deleting race:', error);
+            showAlert('Error deleting race', 'danger');
+        });
+    }
+
+    // Handle race form submission
+    raceForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const raceId = document.getElementById('race-id').value;
+        const raceData = {
+            round: document.getElementById('race-round').value || null,
+            name: document.getElementById('race-name').value,
+            location: document.getElementById('race-location').value,
+            datetime_fp1: timestampFromInput(document.getElementById('race-fp1').value),
+            datetime_fp2: timestampFromInput(document.getElementById('race-fp2').value),
+            datetime_fp3: timestampFromInput(document.getElementById('race-fp3').value),
+            datetime_sprint: timestampFromInput(document.getElementById('race-sprint').value),
+            datetime_qualifying: timestampFromInput(document.getElementById('race-qualifying').value),
+            datetime_race: timestampFromInput(document.getElementById('race-race').value),
+            first_place: document.getElementById('race-first').value || null,
+            second_place: document.getElementById('race-second').value || null,
+            third_place: document.getElementById('race-third').value || null
+        };
+
+        const method = raceId ? 'PUT' : 'POST';
+        const url = raceId ? `${API_BASE_URL}/races/${raceId}` : `${API_BASE_URL}/races`;
+
+        fetch(url, {
             method: method,
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(raceData)
+        })
+        .then(response => response.json())
+        .then(() => {
+            closeModal('race-modal');
+            loadRaces();
+            showAlert(`Race ${raceId ? 'updated' : 'added'} successfully`);
+        })
+        .catch(error => {
+            console.error('Error saving race:', error);
+            showAlert('Error saving race', 'danger');
         });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to ${isEditMode ? 'update' : 'add'} race`);
-        }
-        
-        const result = await response.json();
-        
-        // Show success message
-        formMessage.className = 'success';
-        formMessage.textContent = `Race "${result.name}" ${isEditMode ? 'updated' : 'added'} successfully!`;
-        
-        // Refresh race lists
-        fetchRaces();
-        fetchNextRace();
-        
-        // Close modal after a short delay to show the success message
-        setTimeout(() => {
-            closeModal();
-        }, 1500);
-        
-    } catch (error) {
-        console.error(`Error ${isEditMode ? 'updating' : 'adding'} race:`, error);
-        formMessage.className = 'error';
-        formMessage.textContent = `Error: ${error.message}`;
-    }
-}
+    });
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    fetchRaces();
-    fetchNextRace();
-    
-    // Form submission
-    document.getElementById('race-form').addEventListener('submit', handleFormSubmit);
-    
-    // Add race button
-    document.getElementById('add-race-btn').addEventListener('click', () => {
-        resetForm();
-        openModal();
+    // Cancel buttons
+    document.getElementById('race-cancel-btn').addEventListener('click', () => {
+        closeModal('race-modal');
     });
-    
-    // Cancel button
-    document.getElementById('form-cancel-btn').addEventListener('click', closeModal);
-    
-    // Close modal when clicking X
-    document.querySelector('.close-modal').addEventListener('click', closeModal);
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', (event) => {
-        if (event.target === document.getElementById('race-modal')) {
-            closeModal();
+
+    // ===== RESULTS =====
+    const resultsTable = document.getElementById('results-table').querySelector('tbody');
+    const resultForm = document.getElementById('result-form');
+
+    function loadResults() {
+        // First load races for the select dropdown
+        fetch(`${API_BASE_URL}/races`)
+            .then(response => response.json())
+            .then(races => {
+                const raceSelect = document.getElementById('result-race');
+                raceSelect.innerHTML = '<option value="">Select Race</option>';
+                races.forEach(race => {
+                    raceSelect.innerHTML += `<option value="${race.id}">${race.name}</option>`;
+                });
+            });
+
+        // Then load results
+        fetch(`${API_BASE_URL}/results`)
+            .then(response => response.json())
+            .then(results => {
+                resultsTable.innerHTML = results.length ? '' : '<tr><td colspan="9">No results found</td></tr>';
+                
+                results.forEach(result => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${result.id}</td>
+                        <td>${result.race_name || 'Unknown Race'}</td>
+                        <td>${result.session_type}</td>
+                        <td>${result.position}</td>
+                        <td>${result.driver_name}</td>
+                        <td>${result.team_name}</td>
+                        <td>${result.time || 'N/A'}</td>
+                        <td>${result.points || '0'}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-info edit-result" data-id="${result.id}">Edit</button>
+                            <button class="btn btn-danger delete-result" data-id="${result.id}">Delete</button>
+                        </td>
+                    `;
+                    resultsTable.appendChild(row);
+                });
+
+                attachResultButtonListeners();
+            })
+            .catch(error => {
+                console.error('Error loading results:', error);
+                showAlert('Error loading results', 'danger');
+            });
+    }
+
+    // Add result
+    document.getElementById('add-result-btn').addEventListener('click', () => {
+        resultForm.reset();
+        document.getElementById('result-id').value = '';
+        document.getElementById('result-form-title').textContent = 'Add Result';
+        document.getElementById('result-submit-btn').textContent = 'Add Result';
+        openModal('result-modal');
+    });
+
+    function attachResultButtonListeners() {
+        document.querySelectorAll('.edit-result').forEach(button => {
+            button.addEventListener('click', function() {
+                const resultId = this.getAttribute('data-id');
+                editResult(resultId);
+            });
+        });
+
+        document.querySelectorAll('.delete-result').forEach(button => {
+            button.addEventListener('click', function() {
+                const resultId = this.getAttribute('data-id');
+                if (confirm('Are you sure you want to delete this result?')) {
+                    deleteResult(resultId);
+                }
+            });
+        });
+    }
+
+    function editResult(resultId) {
+        fetch(`${API_BASE_URL}/results/${resultId}`)
+            .then(response => response.json())
+            .then(result => {
+                document.getElementById('result-id').value = result.id;
+                document.getElementById('result-race').value = result.race_id;
+                document.getElementById('result-session').value = result.session_type;
+                document.getElementById('result-position').value = result.position;
+                document.getElementById('result-driver').value = result.driver_name;
+                document.getElementById('result-team').value = result.team_name;
+                document.getElementById('result-time').value = result.time || '';
+                document.getElementById('result-points').value = result.points || 0;
+                document.getElementById('result-laps').value = result.laps || 0;
+                
+                document.getElementById('result-form-title').textContent = 'Edit Result';
+                document.getElementById('result-submit-btn').textContent = 'Update Result';
+                openModal('result-modal');
+            })
+            .catch(error => {
+                console.error('Error loading result:', error);
+                showAlert('Error loading result details', 'danger');
+            });
+    }
+
+    function deleteResult(resultId) {
+        fetch(`${API_BASE_URL}/results/${resultId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(() => {
+            loadResults();
+            showAlert('Result deleted successfully');
+        })
+        .catch(error => {
+            console.error('Error deleting result:', error);
+            showAlert('Error deleting result', 'danger');
+        });
+    }
+
+    // Handle result form submission
+    resultForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const resultId = document.getElementById('result-id').value;
+        const resultData = {
+            race_id: document.getElementById('result-race').value,
+            session_type: document.getElementById('result-session').value,
+            position: Number(document.getElementById('result-position').value),
+            driver_name: document.getElementById('result-driver').value,
+            team_name: document.getElementById('result-team').value,
+            time: document.getElementById('result-time').value || null,
+            laps: Number(document.getElementById('result-laps').value) || null,
+            points: Number(document.getElementById('result-points').value) || 0
+        };
+
+        const method = resultId ? 'PUT' : 'POST';
+        const url = resultId ? 
+            `${API_BASE_URL}/results/${resultId}` : 
+            `${API_BASE_URL}/results`;
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(resultData)
+        })
+        .then(response => response.json())
+        .then(() => {
+            closeModal('result-modal');
+            loadResults();
+            showAlert(`Result ${resultId ? 'updated' : 'added'} successfully`);
+        })
+        .catch(error => {
+            console.error('Error saving result:', error);
+            showAlert('Error saving result', 'danger');
+        });
+    });
+
+    // Cancel button for results
+    document.getElementById('result-cancel-btn').addEventListener('click', () => {
+        closeModal('result-modal');
+    });
+
+    // ===== DRIVER STANDINGS =====
+    const driverStandingsTable = document.getElementById('driver-standings-table').querySelector('tbody');
+    const driverStandingForm = document.getElementById('driver-standing-form');
+
+    function loadDriverStandings() {
+        fetch(`${API_BASE_URL}/driver-standings`)
+            .then(response => response.json())
+            .then(standings => {
+                driverStandingsTable.innerHTML = standings.length ? '' : '<tr><td colspan="5">No driver standings found</td></tr>';
+                
+                standings.forEach(standing => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${standing.id}</td>
+                        <td>${standing.driver_name}</td>
+                        <td>${standing.team_name}</td>
+                        <td>${standing.points}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-info edit-driver-standing" data-id="${standing.id}">Edit</button>
+                            <button class="btn btn-danger delete-driver-standing" data-id="${standing.id}">Delete</button>
+                        </td>
+                    `;
+                    driverStandingsTable.appendChild(row);
+                });
+
+                attachDriverStandingButtonListeners();
+            })
+            .catch(error => {
+                console.error('Error loading driver standings:', error);
+                showAlert('Error loading driver standings', 'danger');
+            });
+    }
+
+    // Add driver standing
+    document.getElementById('add-driver-standing-btn').addEventListener('click', () => {
+        driverStandingForm.reset();
+        document.getElementById('driver-standing-id').value = '';
+        document.getElementById('driver-standing-form-title').textContent = 'Add Driver Standing';
+        document.getElementById('driver-standing-submit-btn').textContent = 'Add Standing';
+        openModal('driver-standing-modal');
+    });
+
+    function attachDriverStandingButtonListeners() {
+        document.querySelectorAll('.edit-driver-standing').forEach(button => {
+            button.addEventListener('click', function() {
+                const standingId = this.getAttribute('data-id');
+                editDriverStanding(standingId);
+            });
+        });
+
+        document.querySelectorAll('.delete-driver-standing').forEach(button => {
+            button.addEventListener('click', function() {
+                const standingId = this.getAttribute('data-id');
+                if (confirm('Are you sure you want to delete this driver standing?')) {
+                    deleteDriverStanding(standingId);
+                }
+            });
+        });
+    }
+
+    function editDriverStanding(standingId) {
+        fetch(`${API_BASE_URL}/driver-standings/${standingId}`)
+            .then(response => response.json())
+            .then(standing => {
+                document.getElementById('driver-standing-id').value = standing.id;
+                document.getElementById('driver-standing-name').value = standing.driver_name;
+                document.getElementById('driver-standing-team').value = standing.team_name;
+                document.getElementById('driver-standing-points').value = standing.points;
+                
+                document.getElementById('driver-standing-form-title').textContent = 'Edit Driver Standing';
+                document.getElementById('driver-standing-submit-btn').textContent = 'Update Standing';
+                openModal('driver-standing-modal');
+            })
+            .catch(error => {
+                console.error('Error loading driver standing:', error);
+                showAlert('Error loading driver standing details', 'danger');
+            });
+    }
+
+    function deleteDriverStanding(standingId) {
+        fetch(`${API_BASE_URL}/driver-standings/${standingId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(() => {
+            loadDriverStandings();
+            showAlert('Driver standing deleted successfully');
+        })
+        .catch(error => {
+            console.error('Error deleting driver standing:', error);
+            showAlert('Error deleting driver standing', 'danger');
+        });
+    }
+
+    // Handle driver standing form submission
+    driverStandingForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const standingId = document.getElementById('driver-standing-id').value;
+        const standingData = {
+            driver_name: document.getElementById('driver-standing-name').value,
+            team_name: document.getElementById('driver-standing-team').value,
+            points: Number(document.getElementById('driver-standing-points').value)
+        };
+
+        const method = standingId ? 'PUT' : 'POST';
+        const url = standingId ? 
+            `${API_BASE_URL}/driver-standings/${standingId}` : 
+            `${API_BASE_URL}/driver-standings`;
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(standingData)
+        })
+        .then(response => response.json())
+        .then(() => {
+            closeModal('driver-standing-modal');
+            loadDriverStandings();
+            showAlert(`Driver standing ${standingId ? 'updated' : 'added'} successfully`);
+        })
+        .catch(error => {
+            console.error('Error saving driver standing:', error);
+            showAlert('Error saving driver standing', 'danger');
+        });
+    });
+
+    // Cancel button for driver standings
+    document.getElementById('driver-standing-cancel-btn').addEventListener('click', () => {
+        closeModal('driver-standing-modal');
+    });
+
+    // ===== CONSTRUCTOR STANDINGS =====
+    const constructorStandingsTable = document.getElementById('constructor-standings-table').querySelector('tbody');
+    const constructorStandingForm = document.getElementById('constructor-standing-form');
+
+    function loadConstructorStandings() {
+        fetch(`${API_BASE_URL}/constructor-standings`)
+            .then(response => response.json())
+            .then(standings => {
+                constructorStandingsTable.innerHTML = standings.length ? '' : '<tr><td colspan="4">No constructor standings found</td></tr>';
+                
+                standings.forEach(standing => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${standing.id}</td>
+                        <td>${standing.constructor_name}</td>
+                        <td>${standing.points}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-info edit-constructor-standing" data-id="${standing.id}">Edit</button>
+                            <button class="btn btn-danger delete-constructor-standing" data-id="${standing.id}">Delete</button>
+                        </td>
+                    `;
+                    constructorStandingsTable.appendChild(row);
+                });
+
+                attachConstructorStandingButtonListeners();
+            })
+            .catch(error => {
+                console.error('Error loading constructor standings:', error);
+                showAlert('Error loading constructor standings', 'danger');
+            });
+    }
+
+    // Add constructor standing
+    document.getElementById('add-constructor-standing-btn').addEventListener('click', () => {
+        constructorStandingForm.reset();
+        document.getElementById('constructor-standing-id').value = '';
+        document.getElementById('constructor-standing-form-title').textContent = 'Add Constructor Standing';
+        document.getElementById('constructor-standing-submit-btn').textContent = 'Add Standing';
+        openModal('constructor-standing-modal');
+    });
+
+    function attachConstructorStandingButtonListeners() {
+        document.querySelectorAll('.edit-constructor-standing').forEach(button => {
+            button.addEventListener('click', function() {
+                const standingId = this.getAttribute('data-id');
+                editConstructorStanding(standingId);
+            });
+        });
+
+        document.querySelectorAll('.delete-constructor-standing').forEach(button => {
+            button.addEventListener('click', function() {
+                const standingId = this.getAttribute('data-id');
+                if (confirm('Are you sure you want to delete this constructor standing?')) {
+                    deleteConstructorStanding(standingId);
+                }
+            });
+        });
+    }
+
+    function editConstructorStanding(standingId) {
+        fetch(`${API_BASE_URL}/constructor-standings/${standingId}`)
+            .then(response => response.json())
+            .then(standing => {
+                document.getElementById('constructor-standing-id').value = standing.id;
+                document.getElementById('constructor-standing-name').value = standing.constructor_name;
+                document.getElementById('constructor-standing-points').value = standing.points;
+                
+                document.getElementById('constructor-standing-form-title').textContent = 'Edit Constructor Standing';
+                document.getElementById('constructor-standing-submit-btn').textContent = 'Update Standing';
+                openModal('constructor-standing-modal');
+            })
+            .catch(error => {
+                console.error('Error loading constructor standing:', error);
+                showAlert('Error loading constructor standing details', 'danger');
+            });
+    }
+
+    function deleteConstructorStanding(standingId) {
+        fetch(`${API_BASE_URL}/constructor-standings/${standingId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(() => {
+            loadConstructorStandings();
+            showAlert('Constructor standing deleted successfully');
+        })
+        .catch(error => {
+            console.error('Error deleting constructor standing:', error);
+            showAlert('Error deleting constructor standing', 'danger');
+        });
+    }
+
+    // Handle constructor standing form submission
+    constructorStandingForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const standingId = document.getElementById('constructor-standing-id').value;
+        const standingData = {
+            constructor_name: document.getElementById('constructor-standing-name').value,
+            points: Number(document.getElementById('constructor-standing-points').value)
+        };
+
+        const method = standingId ? 'PUT' : 'POST';
+        const url = standingId ? 
+            `${API_BASE_URL}/constructor-standings/${standingId}` : 
+            `${API_BASE_URL}/constructor-standings`;
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(standingData)
+        })
+        .then(response => response.json())
+        .then(() => {
+            closeModal('constructor-standing-modal');
+            loadConstructorStandings();
+            showAlert(`Constructor standing ${standingId ? 'updated' : 'added'} successfully`);
+        })
+        .catch(error => {
+            console.error('Error saving constructor standing:', error);
+            showAlert('Error saving constructor standing', 'danger');
+        });
+    });
+
+    // Cancel button for constructor standings
+    document.getElementById('constructor-standing-cancel-btn').addEventListener('click', () => {
+        closeModal('constructor-standing-modal');
+    });
+
+    // ===== LIVE RACE =====
+    const liveRaceTable = document.getElementById('live-race-table').querySelector('tbody');
+    const liveRaceForm = document.getElementById('live-race-form');
+
+    function loadLiveRace() {
+        fetch(`${API_BASE_URL}/live-race`)
+            .then(response => response.json())
+            .then(entries => {
+                liveRaceTable.innerHTML = entries.length ? '' : '<tr><td colspan="8">No live race entries found</td></tr>';
+                
+                entries.forEach(entry => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${entry.position}</td>
+                        <td>${entry.driver_name}</td>
+                        <td>${entry.team_name}</td>
+                        <td>${entry.car_number}</td>
+                        <td>${entry.gap || 'LEADER'}</td>
+                        <td>${entry.lap || 'N/A'}</td>
+                        <td>${entry.dnf ? 'Yes' : 'No'}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-info edit-live-race" data-id="${entry.id}">Edit</button>
+                            <button class="btn btn-danger delete-live-race" data-id="${entry.id}">Delete</button>
+                        </td>
+                    `;
+                    liveRaceTable.appendChild(row);
+                });
+
+                attachLiveRaceButtonListeners();
+            })
+            .catch(error => {
+                console.error('Error loading live race:', error);
+                showAlert('Error loading live race data', 'danger');
+            });
+    }
+
+    // Add live race entry
+    document.getElementById('add-live-race-entry-btn').addEventListener('click', () => {
+        liveRaceForm.reset();
+        document.getElementById('live-race-id').value = '';
+        document.getElementById('live-race-form-title').textContent = 'Add Live Race Entry';
+        document.getElementById('live-race-submit-btn').textContent = 'Add Entry';
+        openModal('live-race-modal');
+    });
+
+    // Clear all live race entries
+    document.getElementById('clear-live-race-btn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all live race entries?')) {
+            fetch(`${API_BASE_URL}/live-race`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(() => {
+                loadLiveRace();
+                showAlert('Live race data cleared successfully');
+            })
+            .catch(error => {
+                console.error('Error clearing live race:', error);
+                showAlert('Error clearing live race data', 'danger');
+            });
         }
     });
-});
+
+    function attachLiveRaceButtonListeners() {
+        document.querySelectorAll('.edit-live-race').forEach(button => {
+            button.addEventListener('click', function() {
+                const entryId = this.getAttribute('data-id');
+                editLiveRaceEntry(entryId);
+            });
+        });
+
+        document.querySelectorAll('.delete-live-race').forEach(button => {
+            button.addEventListener('click', function() {
+                const entryId = this.getAttribute('data-id');
+                if (confirm('Are you sure you want to delete this entry?')) {
+                    deleteLiveRaceEntry(entryId);
+                }
+            });
+        });
+    }
+
+    function editLiveRaceEntry(entryId) {
+        fetch(`${API_BASE_URL}/live-race/${entryId}`)
+            .then(response => response.json())
+            .then(entry => {
+                document.getElementById('live-race-id').value = entry.id;
+                document.getElementById('live-race-driver').value = entry.driver_name;
+                document.getElementById('live-race-team').value = entry.team_name;
+                document.getElementById('live-race-car').value = entry.car_number;
+                document.getElementById('live-race-position').value = entry.position;
+                document.getElementById('live-race-gap').value = entry.gap || '';
+                document.getElementById('live-race-lap').value = entry.lap || '';
+                document.getElementById('live-race-dnf').value = entry.dnf ? '1' : '0';
+                
+                document.getElementById('live-race-form-title').textContent = 'Edit Live Race Entry';
+                document.getElementById('live-race-submit-btn').textContent = 'Update Entry';
+                openModal('live-race-modal');
+            })
+            .catch(error => {
+                console.error('Error loading live race entry:', error);
+                showAlert('Error loading entry details', 'danger');
+            });
+    }
+
+    function deleteLiveRaceEntry(entryId) {
+        fetch(`${API_BASE_URL}/live-race/${entryId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(() => {
+            loadLiveRace();
+            showAlert('Live race entry deleted successfully');
+        })
+        .catch(error => {
+            console.error('Error deleting live race entry:', error);
+            showAlert('Error deleting entry', 'danger');
+        });
+    }
+
+    // Handle live race form submission
+    liveRaceForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const entryId = document.getElementById('live-race-id').value;
+        const entryData = {
+            driver_name: document.getElementById('live-race-driver').value,
+            team_name: document.getElementById('live-race-team').value,
+            car_number: Number(document.getElementById('live-race-car').value),
+            position: Number(document.getElementById('live-race-position').value),
+            gap: document.getElementById('live-race-gap').value || null,
+            lap: Number(document.getElementById('live-race-lap').value) || null,
+            dnf: document.getElementById('live-race-dnf').value === '1'
+        };
+
+        const method = entryId ? 'PUT' : 'POST';
+        const url = entryId ? 
+            `${API_BASE_URL}/live-race/${entryId}` : 
+            `${API_BASE_URL}/live-race`;
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(entryData)
+        })
+        .then(response => response.json())
+        .then(() => {
+            closeModal('live-race-modal');
+            loadLiveRace();
+            showAlert(`Live race entry ${entryId ? 'updated' : 'added'} successfully`);
+        })
+        .catch(error => {
+            console.error('Error saving live race entry:', error);
+            showAlert('Error saving entry', 'danger');
+        });
+    });
+
+    // Cancel button for live race
+    document.getElementById('live-race-cancel-btn').addEventListener('click', () => {
+        closeModal('live-race-modal');
+    });
+
+    // Initial load of races
+    loadRaces();
+}); 

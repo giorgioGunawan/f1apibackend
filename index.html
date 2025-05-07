@@ -3,114 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 Race Manager</title>
+    <title>F1 Admin Dashboard</title>
     <style>
+        :root {
+            --primary-color: #e10600;
+            --secondary-color: #15151e;
+            --accent-color: #38383f;
+            --light-gray: #f5f5f5;
+            --medium-gray: #e0e0e0;
+            --dark-gray: #333;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --info-color: #2196F3;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light-gray);
+            color: var(--dark-gray);
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h1 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .sidebar-menu li.active {
+            background-color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
             padding: 20px;
-            background-color: #f5f5f5;
+            overflow-y: auto;
         }
-        h1 {
-            color: #e10600;
-            text-align: center;
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--medium-gray);
         }
-        .races-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow-x: auto;
+
+        .page-header h2 {
+            margin: 0;
+            color: var(--secondary-color);
         }
-        table {
+
+        /* Tables */
+        .data-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.9em;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f2f2f2;
-            white-space: nowrap;
-        }
-        tr:hover {
-            background-color: #f9f9f9;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-        }
-        label {
-            margin-top: 10px;
-            font-weight: bold;
-        }
-        input, button {
-            padding: 10px;
-            margin-top: 5px;
-            border: 1px solid #ddd;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border-radius: 4px;
+            overflow: hidden;
         }
-        button {
-            background-color: #e10600;
+
+        .data-table th {
+            background-color: var(--secondary-color);
             color: white;
-            border: none;
-            cursor: pointer;
-            margin-top: 20px;
-            font-weight: bold;
+            text-align: left;
+            padding: 12px 15px;
+            font-weight: 500;
         }
-        button:hover {
+
+        .data-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
             background-color: #c00500;
         }
-        .next-race {
-            background-color: #fff4e5;
-            border-left: 4px solid #ff9800;
-            padding: 10px;
-            margin-bottom: 20px;
-        }
-        .error {
-            color: red;
-            margin-top: 10px;
-        }
-        .success {
-            color: green;
-            margin-top: 10px;
-        }
-        .delete-btn {
-            background-color: #ff4136;
+
+        .btn-info {
+            background-color: var(--info-color);
             color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
         }
-        .delete-btn:hover {
-            background-color: #d50000;
-        }
-        .edit-btn {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-            margin-right: 5px;
-        }
-        .edit-btn:hover {
+
+        .btn-info:hover {
             background-color: #0b7dda;
         }
-        .form-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
         }
-        
-        /* Modal styles */
+
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* Forms */
         .modal {
             display: none;
             position: fixed;
@@ -122,6 +178,7 @@
             background-color: rgba(0,0,0,0.5);
             overflow: auto;
         }
+
         .modal-content {
             background-color: white;
             margin: 5% auto;
@@ -132,10 +189,12 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             animation: modalopen 0.3s;
         }
+
         @keyframes modalopen {
             from {opacity: 0; transform: translateY(-50px);}
             to {opacity: 1; transform: translateY(0);}
         }
+
         .close-modal {
             color: #aaa;
             float: right;
@@ -143,88 +202,468 @@
             font-weight: bold;
             cursor: pointer;
         }
+
         .close-modal:hover {
             color: #555;
         }
-        .add-race-btn {
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        /* Utilities */
+        .table-container {
+            overflow-x: auto;
             margin-bottom: 20px;
         }
-        td {
-            white-space: nowrap;
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .alert {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .alert-success {
+            background-color: rgba(76, 175, 80, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .alert-danger {
+            background-color: rgba(244, 67, 54, 0.1);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                padding: 10px 0;
+            }
+            
+            .sidebar-header {
+                padding: 0 15px 10px;
+            }
+            
+            .sidebar-menu {
+                display: flex;
+                flex-wrap: wrap;
+                margin: 10px 0;
+            }
+            
+            .sidebar-menu li {
+                padding: 8px 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>F1 Race Manager</h1>
-    
-    <div class="next-race" id="next-race">
-        <h2>Next Race</h2>
-        <div id="next-race-details">Loading...</div>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>F1 Admin</h1>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active" data-section="races">Races</li>
+                <li data-section="results">Results</li>
+                <li data-section="driver-standings">Driver Standings</li>
+                <li data-section="constructor-standings">Constructor Standings</li>
+                <li data-section="live-race">Live Race</li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Races Section -->
+            <div id="races" class="section active">
+                <div class="page-header">
+                    <h2>Races</h2>
+                    <button id="add-race-btn" class="btn btn-primary">Add Race</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="races-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Round</th>
+                                <th>Name</th>
+                                <th>Location</th>
+                                <th>Race Date</th>
+                                <th>Podium</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7">Loading races...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="section">
+                <div class="page-header">
+                    <h2>Results</h2>
+                    <button id="add-result-btn" class="btn btn-primary">Add Result</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="results-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Race</th>
+                                <th>Session</th>
+                                <th>Position</th>
+                                <th>Driver</th>
+                                <th>Team</th>
+                                <th>Time</th>
+                                <th>Points</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="9">Loading results...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Driver Standings Section -->
+            <div id="driver-standings" class="section">
+                <div class="page-header">
+                    <h2>Driver Standings</h2>
+                    <button id="add-driver-standing-btn" class="btn btn-primary">Add Driver Standing</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="driver-standings-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Driver</th>
+                                <th>Team</th>
+                                <th>Points</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5">Loading driver standings...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Constructor Standings Section -->
+            <div id="constructor-standings" class="section">
+                <div class="page-header">
+                    <h2>Constructor Standings</h2>
+                    <button id="add-constructor-standing-btn" class="btn btn-primary">Add Constructor Standing</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="constructor-standings-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Constructor</th>
+                                <th>Points</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="4">Loading constructor standings...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Live Race Section -->
+            <div id="live-race" class="section">
+                <div class="page-header">
+                    <h2>Live Race</h2>
+                    <div>
+                        <button id="add-live-race-entry-btn" class="btn btn-primary">Add Entry</button>
+                        <button id="clear-live-race-btn" class="btn btn-danger">Clear All</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="live-race-table">
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th>Driver</th>
+                                <th>Team</th>
+                                <th>Car #</th>
+                                <th>Gap</th>
+                                <th>Lap</th>
+                                <th>DNF</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="8">Loading live race data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-    
-    <button id="add-race-btn" class="add-race-btn">Add New Race</button>
-    
-    <div class="races-container">
-        <h2>All Races</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Location</th>
-                    <th>FP1</th>
-                    <th>FP2</th>
-                    <th>FP3</th>
-                    <th>Sprint</th>
-                    <th>Qualifying</th>
-                    <th>Race</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="races-table-body">
-                <tr>
-                    <td colspan="10">Loading races...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- Modal -->
+
+    <!-- Race Modal -->
     <div id="race-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2 id="form-title">Add New Race</h2>
-            <form id="race-form" data-mode="add">
-                <label for="name">Race Name:</label>
-                <input type="text" id="name" name="name" required>
-                
-                <label for="location">Location:</label>
-                <input type="text" id="location" name="location" required>
-                
-                <label for="datetime_fp1">Practice 1:</label>
-                <input type="datetime-local" id="datetime_fp1" name="datetime_fp1">
-                
-                <label for="datetime_fp2">Practice 2:</label>
-                <input type="datetime-local" id="datetime_fp2" name="datetime_fp2">
-                
-                <label for="datetime_fp3">Practice 3:</label>
-                <input type="datetime-local" id="datetime_fp3" name="datetime_fp3">
-                
-                <label for="datetime_sprint">Sprint:</label>
-                <input type="datetime-local" id="datetime_sprint" name="datetime_sprint">
-                
-                <label for="datetime_qualifying">Qualifying:</label>
-                <input type="datetime-local" id="datetime_qualifying" name="datetime_qualifying">
-                
-                <label for="datetime_race">Race (required):</label>
-                <input type="datetime-local" id="datetime_race" name="datetime_race" required>
-                
+            <h2 id="race-form-title">Add Race</h2>
+            <form id="race-form">
+                <input type="hidden" id="race-id">
+                <div class="form-group">
+                    <label for="race-round">Round:</label>
+                    <input type="number" id="race-round" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="race-name">Name:</label>
+                    <input type="text" id="race-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="race-location">Location:</label>
+                    <input type="text" id="race-location" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="race-fp1">Practice 1:</label>
+                    <input type="datetime-local" id="race-fp1" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="race-fp2">Practice 2:</label>
+                    <input type="datetime-local" id="race-fp2" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="race-fp3">Practice 3:</label>
+                    <input type="datetime-local" id="race-fp3" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="race-sprint">Sprint:</label>
+                    <input type="datetime-local" id="race-sprint" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="race-qualifying">Qualifying:</label>
+                    <input type="datetime-local" id="race-qualifying" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="race-race">Race:</label>
+                    <input type="datetime-local" id="race-race" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="race-first">First Place:</label>
+                    <input type="text" id="race-first" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="race-second">Second Place:</label>
+                    <input type="text" id="race-second" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="race-third">Third Place:</label>
+                    <input type="text" id="race-third" class="form-control">
+                </div>
                 <div class="form-buttons">
-                    <button type="submit" id="form-submit-btn">Add Race</button>
-                    <button type="button" id="form-cancel-btn" style="background-color: #888;">Cancel</button>
+                    <button type="button" class="btn" id="race-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="race-submit-btn">Save</button>
                 </div>
             </form>
-            <div id="form-message"></div>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="result-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="result-form-title">Add Result</h2>
+            <form id="result-form">
+                <input type="hidden" id="result-id">
+                <div class="form-group">
+                    <label for="result-race">Race:</label>
+                    <select id="result-race" class="form-control" required>
+                        <option value="">Select Race</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="result-session">Session Type:</label>
+                    <select id="result-session" class="form-control" required>
+                        <option value="fp1">Practice 1</option>
+                        <option value="fp2">Practice 2</option>
+                        <option value="fp3">Practice 3</option>
+                        <option value="sprint">Sprint</option>
+                        <option value="qualifying">Qualifying</option>
+                        <option value="race">Race</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="result-position">Position:</label>
+                    <input type="number" id="result-position" class="form-control" required min="1">
+                </div>
+                <div class="form-group">
+                    <label for="result-driver">Driver:</label>
+                    <input type="text" id="result-driver" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="result-team">Team:</label>
+                    <input type="text" id="result-team" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="result-time">Time:</label>
+                    <input type="text" id="result-time" class="form-control" placeholder="e.g. 1:23.456 or +5.123s or DNF">
+                </div>
+                <div class="form-group">
+                    <label for="result-laps">Laps:</label>
+                    <input type="number" id="result-laps" class="form-control" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="result-points">Points:</label>
+                    <input type="number" id="result-points" class="form-control" min="0">
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="btn" id="result-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="result-submit-btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Driver Standing Modal -->
+    <div id="driver-standing-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="driver-standing-form-title">Add Driver Standing</h2>
+            <form id="driver-standing-form">
+                <input type="hidden" id="driver-standing-id">
+                <div class="form-group">
+                    <label for="driver-standing-name">Driver Name:</label>
+                    <input type="text" id="driver-standing-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="driver-standing-team">Team Name:</label>
+                    <input type="text" id="driver-standing-team" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="driver-standing-points">Points:</label>
+                    <input type="number" id="driver-standing-points" class="form-control" required min="0">
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="btn" id="driver-standing-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="driver-standing-submit-btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Constructor Standing Modal -->
+    <div id="constructor-standing-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="constructor-standing-form-title">Add Constructor Standing</h2>
+            <form id="constructor-standing-form">
+                <input type="hidden" id="constructor-standing-id">
+                <div class="form-group">
+                    <label for="constructor-standing-name">Constructor Name:</label>
+                    <input type="text" id="constructor-standing-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="constructor-standing-points">Points:</label>
+                    <input type="number" id="constructor-standing-points" class="form-control" required min="0">
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="btn" id="constructor-standing-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="constructor-standing-submit-btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Live Race Entry Modal -->
+    <div id="live-race-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="live-race-form-title">Add Live Race Entry</h2>
+            <form id="live-race-form">
+                <input type="hidden" id="live-race-id">
+                <div class="form-group">
+                    <label for="live-race-driver">Driver Name:</label>
+                    <input type="text" id="live-race-driver" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="live-race-team">Team Name:</label>
+                    <input type="text" id="live-race-team" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="live-race-car">Car Number:</label>
+                    <input type="number" id="live-race-car" class="form-control" required min="1">
+                </div>
+                <div class="form-group">
+                    <label for="live-race-position">Position:</label>
+                    <input type="number" id="live-race-position" class="form-control" required min="1">
+                </div>
+                <div class="form-group">
+                    <label for="live-race-gap">Time Behind:</label>
+                    <input type="text" id="live-race-gap" class="form-control" placeholder="e.g. +1.234s or LEADER">
+                </div>
+                <div class="form-group">
+                    <label for="live-race-lap">Current Lap:</label>
+                    <input type="number" id="live-race-lap" class="form-control" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="live-race-dnf">DNF:</label>
+                    <select id="live-race-dnf" class="form-control">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="btn" id="live-race-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="live-race-submit-btn">Save</button>
+                </div>
+            </form>
         </div>
     </div>
 
