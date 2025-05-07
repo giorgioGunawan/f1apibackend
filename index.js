@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -12,15 +13,27 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Database connection - connects to existing database
-const db = new sqlite3.Database('./data/f1races.db', sqlite3.OPEN_READWRITE, (err) => {
+// Determine if we're running on Render with a persistent disk
+const isRender = process.env.RENDER === 'true';
+const renderDataDir = '/data'; // Render persistent disk mount point
+
+// Choose the appropriate database path
+let dbPath;
+if (isRender && fs.existsSync(renderDataDir)) {
+  dbPath = path.join(renderDataDir, 'f1races.db');
+  console.log('Using Render persistent disk database at:', dbPath);
+} else {
+  dbPath = path.join(__dirname, 'data', 'f1races.db');
+  console.log('Using local database at:', dbPath);
+}
+
+// Database connection
+const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error('Error connecting to database:', err.message);
-    console.error('Please ensure the database file exists before starting the server.');
-    process.exit(1); // Exit if database doesn't exist
-  } else {
-    console.log('Connected to the existing F1 races database');
+    console.error('Error opening database:', err.message);
+    process.exit(1);
   }
+  console.log('Connected to the F1 races database');
 });
 
 // Routes
