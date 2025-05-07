@@ -117,6 +117,27 @@
                 width: 100%;
             }
         }
+
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .edit-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-right: 5px;
+        }
+
+        .edit-btn:hover {
+            background-color: #0b7dda;
+        }
     </style>
 </head>
 <body>
@@ -154,8 +175,8 @@
         </div>
         
         <div class="form-container">
-            <h2>Add New Race</h2>
-            <form id="add-race-form">
+            <h2 id="form-title">Add New Race</h2>
+            <form id="race-form" data-mode="add">
                 <label for="name">Race Name:</label>
                 <input type="text" id="name" name="name" required>
                 
