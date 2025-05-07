@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -737,6 +738,14 @@ app.put('/api/races/:id/podium', (req, res) => {
         third_place
       });
     });
+});
+
+// Serve static files from the 'public' directory
+app.use(express.static('public'));
+
+// Add a route for the admin dashboard
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 app.listen(PORT, () => {

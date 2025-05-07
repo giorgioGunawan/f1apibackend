@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // API base URL
-    const API_BASE_URL = 'http://localhost:3000/api';
+    const API_BASE_URL = '/api';
 
     // Navigation
     const menuItems = document.querySelectorAll('.sidebar-menu li');
