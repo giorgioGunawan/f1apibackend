@@ -44,9 +44,10 @@ async function fetchRaces() {
         });
         
         // Add event listeners to delete buttons
+        /*
         document.querySelectorAll('.delete-btn').forEach(button => {
             button.addEventListener('click', handleDeleteRace);
-        });
+        });*/
     } catch (error) {
         console.error('Error fetching races:', error);
         document.getElementById('races-table-body').innerHTML = 
