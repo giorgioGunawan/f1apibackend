@@ -1,9 +1,9 @@
 const API_URL = 'https://f1apibackend-1.onrender.com';
 
-// Format timestamp to readable date
+// Format timestamp to readable date in UTC
 function formatDate(timestamp) {
     const date = new Date(timestamp * 1000);
-    return date.toLocaleString();
+    return date.toUTCString();
 }
 
 // Convert datetime-local to Unix timestamp
@@ -86,13 +86,24 @@ async function fetchNextRace() {
         nextRaceElement.innerHTML = `
             <p><strong>${race.name}</strong></p>
             <p>Location: ${race.location}</p>
-            <p>Date & Time: ${formatDate(race.datetime)}</p>
+            <p>Date & Time: ${formatDate(race.datetime_race)}</p>
         `;
     } catch (error) {
         console.error('Error fetching next race:', error);
         document.getElementById('next-race-details').innerHTML = 
             `Error loading next race: ${error.message}`;
     }
+}
+
+// Open modal
+function openModal() {
+    document.getElementById('race-modal').style.display = 'block';
+}
+
+// Close modal
+function closeModal() {
+    document.getElementById('race-modal').style.display = 'none';
+    resetForm();
 }
 
 // Handle edit race button click
@@ -125,11 +136,8 @@ async function handleEditRace(event) {
         // Change button text
         document.getElementById('form-submit-btn').textContent = 'Update Race';
         
-        // Add cancel button functionality
-        document.getElementById('form-cancel-btn').style.display = 'inline-block';
-        
-        // Scroll to form
-        document.querySelector('.form-container').scrollIntoView({ behavior: 'smooth' });
+        // Open modal
+        openModal();
         
     } catch (error) {
         console.error('Error fetching race details:', error);
@@ -170,7 +178,6 @@ function resetForm() {
     document.getElementById('race-form').dataset.mode = 'add';
     document.getElementById('race-form').reset();
     document.getElementById('form-submit-btn').textContent = 'Add Race';
-    document.getElementById('form-cancel-btn').style.display = 'none';
     document.getElementById('form-message').className = '';
     document.getElementById('form-message').textContent = '';
 }
@@ -234,9 +241,6 @@ async function handleFormSubmit(event) {
         
         const result = await response.json();
         
-        // Reset form
-        resetForm();
-        
         // Show success message
         formMessage.className = 'success';
         formMessage.textContent = `Race "${result.name}" ${isEditMode ? 'updated' : 'added'} successfully!`;
@@ -244,6 +248,11 @@ async function handleFormSubmit(event) {
         // Refresh race lists
         fetchRaces();
         fetchNextRace();
+        
+        // Close modal after a short delay to show the success message
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
         
     } catch (error) {
         console.error(`Error ${isEditMode ? 'updating' : 'adding'} race:`, error);
@@ -256,9 +265,26 @@ async function handleFormSubmit(event) {
 document.addEventListener('DOMContentLoaded', () => {
     fetchRaces();
     fetchNextRace();
+    
+    // Form submission
     document.getElementById('race-form').addEventListener('submit', handleFormSubmit);
-    document.getElementById('form-cancel-btn').addEventListener('click', (e) => {
-        e.preventDefault();
+    
+    // Add race button
+    document.getElementById('add-race-btn').addEventListener('click', () => {
         resetForm();
+        openModal();
+    });
+    
+    // Cancel button
+    document.getElementById('form-cancel-btn').addEventListener('click', closeModal);
+    
+    // Close modal when clicking X
+    document.querySelector('.close-modal').addEventListener('click', closeModal);
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+        if (event.target === document.getElementById('race-modal')) {
+            closeModal();
+        }
     });
 });

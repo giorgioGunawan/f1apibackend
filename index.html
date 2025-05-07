@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -16,23 +16,12 @@
             color: #e10600;
             text-align: center;
         }
-        .container {
-            display: flex;
-            gap: 20px;
-        }
         .races-container {
-            flex: 2;
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .form-container {
-            flex: 1;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
         }
         table {
             width: 100%;
@@ -46,6 +35,7 @@
         }
         th {
             background-color: #f2f2f2;
+            white-space: nowrap;
         }
         tr:hover {
             background-color: #f9f9f9;
@@ -98,32 +88,9 @@
             cursor: pointer;
             font-size: 0.9em;
         }
-
         .delete-btn:hover {
             background-color: #d50000;
         }
-
-        .races-container {
-            overflow-x: auto; /* Allows horizontal scrolling for wide tables */
-        }
-
-        @media (max-width: 1200px) {
-            .container {
-                flex-direction: column;
-            }
-            
-            .races-container, .form-container {
-                flex: none;
-                width: 100%;
-            }
-        }
-
-        .form-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
         .edit-btn {
             background-color: #2196F3;
             color: white;
@@ -134,9 +101,56 @@
             font-size: 0.9em;
             margin-right: 5px;
         }
-
         .edit-btn:hover {
             background-color: #0b7dda;
+        }
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            animation: modalopen 0.3s;
+        }
+        @keyframes modalopen {
+            from {opacity: 0; transform: translateY(-50px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-modal:hover {
+            color: #555;
+        }
+        .add-race-btn {
+            margin-bottom: 20px;
+        }
+        td {
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -148,33 +162,37 @@
         <div id="next-race-details">Loading...</div>
     </div>
     
-    <div class="container">
-        <div class="races-container">
-            <h2>All Races</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Location</th>
-                        <th>FP1</th>
-                        <th>FP2</th>
-                        <th>FP3</th>
-                        <th>Sprint</th>
-                        <th>Qualifying</th>
-                        <th>Race</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="races-table-body">
-                    <tr>
-                        <td colspan="10">Loading races...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="form-container">
+    <button id="add-race-btn" class="add-race-btn">Add New Race</button>
+    
+    <div class="races-container">
+        <h2>All Races</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Location</th>
+                    <th>FP1</th>
+                    <th>FP2</th>
+                    <th>FP3</th>
+                    <th>Sprint</th>
+                    <th>Qualifying</th>
+                    <th>Race</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="races-table-body">
+                <tr>
+                    <td colspan="10">Loading races...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Modal -->
+    <div id="race-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
             <h2 id="form-title">Add New Race</h2>
             <form id="race-form" data-mode="add">
                 <label for="name">Race Name:</label>
@@ -201,7 +219,10 @@
                 <label for="datetime_race">Race (required):</label>
                 <input type="datetime-local" id="datetime_race" name="datetime_race" required>
                 
-                <button type="submit">Add Race</button>
+                <div class="form-buttons">
+                    <button type="submit" id="form-submit-btn">Add Race</button>
+                    <button type="button" id="form-cancel-btn" style="background-color: #888;">Cancel</button>
+                </div>
             </form>
             <div id="form-message"></div>
         </div>
