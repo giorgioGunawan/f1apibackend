@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 races.forEach(race => {
                     const row = document.createElement('tr');
-                    row.dataset.id = race.id; // Store ID as data attribute but don't display it
+                    row.dataset.id = race.id;
                     
                     // Format race date
                     const raceDate = new Date(race.datetime_race * 1000).toLocaleDateString();
@@ -446,9 +446,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>${race.location}</td>
                         <td>${raceDate}</td>
                         <td>${podium}</td>
-                        <td class="action-buttons">
-                            <button class="btn btn-info edit-race-btn">Edit</button>
-                            <button class="btn btn-danger delete-race-btn">Delete</button>
+                        <td>
+                            <i class="fas fa-edit action-icon edit-icon edit-race-btn"></i>
+                            <i class="fas fa-trash-alt action-icon delete-icon delete-race-btn"></i>
                         </td>
                     `;
                     
@@ -456,27 +456,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Add event listeners for edit and delete buttons
-                attachRaceButtonListeners();
+                addRaceEventListeners();
             })
             .catch(error => {
                 console.error('Error loading races:', error);
             });
     }
 
-    function attachRaceButtonListeners() {
+    function addRaceEventListeners() {
         document.querySelectorAll('.edit-race-btn').forEach(button => {
             button.addEventListener('click', function() {
-                const raceId = this.closest('tr').dataset.id;
-                editRace(raceId);
+                const row = this.closest('tr');
+                const id = row.dataset.id;
+                editRace(id);
             });
         });
 
         document.querySelectorAll('.delete-race-btn').forEach(button => {
             button.addEventListener('click', function() {
-                const raceId = this.closest('tr').dataset.id;
-                if (confirm('Are you sure you want to delete this race?')) {
-                    deleteRace(raceId);
-                }
+                const row = this.closest('tr');
+                const id = row.dataset.id;
+                deleteRace(id);
             });
         });
     }
@@ -604,7 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         results.forEach(result => {
                             const row = document.createElement('tr');
-                            row.dataset.id = result.id; // Store ID as data attribute
+                            row.dataset.id = result.id;
                             
                             // Format session type
                             const sessionType = formatSessionType(result.session_type);
@@ -617,9 +617,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td>${result.team_name}</td>
                                 <td>${result.time || '-'}</td>
                                 <td>${result.points}</td>
-                                <td class="action-buttons">
-                                    <button class="btn btn-info edit-result-btn">Edit</button>
-                                    <button class="btn btn-danger delete-result-btn">Delete</button>
+                                <td>
+                                    <i class="fas fa-edit action-icon edit-icon edit-result-btn"></i>
+                                    <i class="fas fa-trash-alt action-icon delete-icon delete-result-btn"></i>
                                 </td>
                             `;
                             
@@ -627,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                         
                         // Add event listeners for edit and delete buttons
-                        attachResultButtonListeners();
+                        addResultEventListeners();
                     });
             })
             .catch(error => {
@@ -644,19 +644,21 @@ document.addEventListener('DOMContentLoaded', function() {
         openModal('result-modal');
     });
 
-    function attachResultButtonListeners() {
+    function addResultEventListeners() {
         document.querySelectorAll('.edit-result-btn').forEach(button => {
             button.addEventListener('click', function() {
-                const resultId = this.closest('tr').dataset.id;
-                editResult(resultId);
+                const row = this.closest('tr');
+                const id = row.dataset.id;
+                editResult(id);
             });
         });
 
         document.querySelectorAll('.delete-result-btn').forEach(button => {
             button.addEventListener('click', function() {
-                const resultId = this.closest('tr').dataset.id;
+                const row = this.closest('tr');
+                const id = row.dataset.id;
                 if (confirm('Are you sure you want to delete this result?')) {
-                    deleteResult(resultId);
+                    deleteResult(id);
                 }
             });
         });
@@ -785,9 +787,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${standing.driver_number || '-'}</td>
                 <td>${standing.team_name}</td>
                 <td>${standing.points}</td>
-                <td class="action-buttons">
-                    <button class="btn btn-info edit-driver-standing-btn">Edit</button>
-                    <button class="btn btn-danger delete-driver-standing-btn">Delete</button>
+                <td>
+                    <i class="fas fa-edit action-icon edit-icon edit-driver-standing-btn"></i>
+                    <i class="fas fa-trash-alt action-icon delete-icon delete-driver-standing-btn"></i>
                 </td>
             `;
             
@@ -795,19 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Add event listeners for edit and delete buttons
-        document.querySelectorAll('.edit-driver-standing-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const standingId = this.closest('tr').dataset.id;
-                editDriverStanding(standingId);
-            });
-        });
-        
-        document.querySelectorAll('.delete-driver-standing-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const standingId = this.closest('tr').dataset.id;
-                deleteDriverStanding(standingId);
-            });
-        });
+        addDriverStandingEventListeners();
     }
 
     // Add driver standing
@@ -818,6 +808,24 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('driver-standing-submit-btn').textContent = 'Add Standing';
         openModal('driver-standing-modal');
     });
+
+    function addDriverStandingEventListeners() {
+        document.querySelectorAll('.edit-driver-standing-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const standingId = row.dataset.id;
+                editDriverStanding(standingId);
+            });
+        });
+
+        document.querySelectorAll('.delete-driver-standing-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const standingId = row.dataset.id;
+                deleteDriverStanding(standingId);
+            });
+        });
+    }
 
     function editDriverStanding(standingId) {
         fetch('/api/driver-standings/' + standingId)
@@ -922,9 +930,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>${standing.driver_name_1 || '-'}</td>
                         <td>${standing.driver_name_2 || '-'}</td>
                         <td>${standing.driver_name_3 || '-'}</td>
-                        <td class="action-buttons">
-                            <button class="btn btn-info edit-constructor-standing-btn">Edit</button>
-                            <button class="btn btn-danger delete-constructor-standing-btn">Delete</button>
+                        <td>
+                            <i class="fas fa-edit action-icon edit-icon edit-constructor-standing-btn"></i>
+                            <i class="fas fa-trash-alt action-icon delete-icon delete-constructor-standing-btn"></i>
                         </td>
                     `;
                     
@@ -932,7 +940,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Add event listeners for edit and delete buttons
-                attachConstructorStandingEventListeners();
+                addConstructorStandingEventListeners();
             })
             .catch(error => {
                 console.error('Error loading constructor standings:', error);
@@ -947,6 +955,24 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('constructor-standing-submit-btn').textContent = 'Add Standing';
         openModal('constructor-standing-modal');
     });
+
+    function addConstructorStandingEventListeners() {
+        document.querySelectorAll('.edit-constructor-standing-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const standingId = row.dataset.id;
+                editConstructorStanding(standingId);
+            });
+        });
+
+        document.querySelectorAll('.delete-constructor-standing-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const standingId = row.dataset.id;
+                deleteConstructorStanding(standingId);
+            });
+        });
+    }
 
     function editConstructorStanding(standingId) {
         fetch('/api/constructor-standings/' + standingId)
@@ -1037,34 +1063,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const liveRaceForm = document.getElementById('live-race-form');
 
     function loadLiveRace() {
-        fetch('/api/live-race')
+        fetch('https://f1apibackend-1.onrender.com/api/live-race')
             .then(response => response.json())
             .then(entries => {
-                liveRaceTable.innerHTML = entries.length ? '' : '<tr><td colspan="8">No live race entries found</td></tr>';
+                const tableBody = document.querySelector('#live-race-table tbody');
+                tableBody.innerHTML = '';
+                
+                // Sort entries by position
+                entries.sort((a, b) => a.position - b.position);
                 
                 entries.forEach(entry => {
                     const row = document.createElement('tr');
+                    row.dataset.id = entry.id;
+                    row.classList.add('draggable');
+                    
                     row.innerHTML = `
+                        <td><i class="fas fa-grip-lines drag-handle"></i></td>
                         <td>${entry.position}</td>
                         <td>${entry.driver_name}</td>
                         <td>${entry.team_name}</td>
                         <td>${entry.car_number}</td>
-                        <td>${entry.gap || 'LEADER'}</td>
-                        <td>${entry.lap || 'N/A'}</td>
-                        <td>${entry.dnf ? 'Yes' : 'No'}</td>
-                        <td class="action-buttons">
-                            <button class="btn btn-info edit-live-race-btn">Edit</button>
-                            <button class="btn btn-danger delete-live-race-btn">Delete</button>
+                        <td>${entry.time_behind}</td>
+                        <td>${entry.current_lap}</td>
+                        <td>${entry.is_dnf ? 'Yes' : 'No'}</td>
+                        <td>
+                            <i class="fas fa-edit action-icon edit-icon edit-live-race-btn"></i>
+                            <i class="fas fa-trash-alt action-icon delete-icon delete-live-race-btn"></i>
                         </td>
                     `;
-                    liveRaceTable.appendChild(row);
+                    
+                    tableBody.appendChild(row);
                 });
-
-                attachLiveRaceButtonListeners();
+                
+                // Add event listeners for edit and delete buttons
+                addLiveRaceEventListeners();
+                
+                // Initialize drag and drop
+                setTimeout(() => {
+                    initDragAndDrop();
+                }, 100);
             })
             .catch(error => {
-                console.error('Error loading live race:', error);
-                showAlert('Error loading live race data', 'danger');
+                console.error('Error loading live race data:', error);
             });
     }
 
@@ -1095,20 +1135,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    function attachLiveRaceButtonListeners() {
+    function addLiveRaceEventListeners() {
         document.querySelectorAll('.edit-live-race-btn').forEach(button => {
             button.addEventListener('click', function() {
-                const entryId = this.closest('tr').dataset.id;
-                editLiveRaceEntry(entryId);
+                const row = this.closest('tr');
+                const id = row.dataset.id;
+                editLiveRaceEntry(id);
             });
         });
 
         document.querySelectorAll('.delete-live-race-btn').forEach(button => {
             button.addEventListener('click', function() {
-                const entryId = this.closest('tr').dataset.id;
-                if (confirm('Are you sure you want to delete this entry?')) {
-                    deleteLiveRaceEntry(entryId);
-                }
+                const row = this.closest('tr');
+                const id = row.dataset.id;
+                deleteLiveRaceEntry(id);
             });
         });
     }
@@ -1419,4 +1459,134 @@ function formatSessionType(sessionType) {
         case 'race': return 'Race';
         default: return sessionType;
     }
+}
+
+// Improved drag and drop functionality for live race table
+function initDragAndDrop() {
+    const tbody = document.querySelector('#live-race-table tbody');
+    let draggedItem = null;
+    
+    // Add event listeners for drag and drop
+    document.querySelectorAll('#live-race-table tbody tr').forEach(row => {
+        // Make only the drag handle initiate dragging
+        const dragHandle = row.querySelector('.drag-handle');
+        if (dragHandle) {
+            dragHandle.addEventListener('mousedown', function() {
+                row.draggable = true;
+            });
+            
+            row.addEventListener('mouseleave', function() {
+                row.draggable = false;
+            });
+        }
+        
+        // Drag start
+        row.addEventListener('dragstart', function(e) {
+            draggedItem = this;
+            setTimeout(() => {
+                this.classList.add('dragging');
+            }, 0);
+        });
+        
+        // Drag end
+        row.addEventListener('dragend', function() {
+            this.classList.remove('dragging');
+            this.draggable = false;
+            
+            // Update positions in the database
+            updatePositions();
+        });
+        
+        // Drag over
+        row.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            if (draggedItem === this) return;
+            
+            const mouseY = e.clientY;
+            const thisRect = this.getBoundingClientRect();
+            const midPoint = thisRect.top + thisRect.height / 2;
+            
+            if (mouseY < midPoint) {
+                tbody.insertBefore(draggedItem, this);
+            } else {
+                tbody.insertBefore(draggedItem, this.nextSibling);
+            }
+        });
+    });
+    
+    // Allow dropping on the tbody
+    tbody.addEventListener('dragover', function(e) {
+        e.preventDefault();
+    });
+    
+    tbody.addEventListener('drop', function(e) {
+        e.preventDefault();
+        // Update row numbers visually
+        updateRowNumbers();
+    });
+}
+
+// Update row numbers visually
+function updateRowNumbers() {
+    const rows = document.querySelectorAll('#live-race-table tbody tr');
+    rows.forEach((row, index) => {
+        const positionCell = row.querySelector('td:nth-child(2)');
+        if (positionCell) {
+            positionCell.textContent = index + 1;
+        }
+    });
+}
+
+// Update positions in the database
+function updatePositions() {
+    const rows = Array.from(document.querySelectorAll('#live-race-table tbody tr'));
+    
+    // First update the visual positions
+    updateRowNumbers();
+    
+    // Then prepare the updates for the server
+    const updatePromises = rows.map((row, index) => {
+        const id = row.dataset.id;
+        const newPosition = index + 1;
+        
+        console.log(`Updating entry ID ${id} to position ${newPosition}`);
+        
+        // Return the promise from the fetch call
+        return fetch(`https://f1apibackend-1.onrender.com/api/live-race/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                position: newPosition 
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Failed to update position for ID ${id}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(`Successfully updated position for ID ${id}`, data);
+            return data;
+        })
+        .catch(error => {
+            console.error(`Error updating position for ID ${id}:`, error);
+            throw error;
+        });
+    });
+    
+    // Wait for all updates to complete
+    Promise.all(updatePromises)
+        .then(() => {
+            console.log('All positions updated successfully');
+            // Reload the live race data to ensure everything is in sync
+            loadLiveRace();
+        })
+        .catch(error => {
+            console.error('Error updating positions:', error);
+            // Still reload to get the current state from the server
+            loadLiveRace();
+        });
 } 

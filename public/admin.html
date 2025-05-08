@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #e10600;
@@ -438,6 +439,45 @@
             font-size: 12px;
             color: var(--accent-color);
         }
+
+        /* Add styles for action icons */
+        .action-icon {
+            cursor: pointer;
+            padding: 5px;
+            font-size: 16px;
+            color: var(--dark-gray);
+            transition: color 0.2s;
+        }
+        
+        .edit-icon:hover {
+            color: var(--info-color);
+        }
+        
+        .delete-icon:hover {
+            color: var(--danger-color);
+        }
+        
+        /* Styles for drag and drop */
+        .draggable {
+            cursor: move;
+        }
+        
+        .drag-handle {
+            cursor: grab;
+            padding: 5px;
+            color: var(--accent-color);
+        }
+        
+        .dragging {
+            opacity: 0.5;
+            background-color: var(--light-gray);
+        }
+        
+        .drop-indicator {
+            height: 2px;
+            background-color: var(--primary-color);
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -584,6 +624,7 @@
                     <table class="data-table" id="live-race-table">
                         <thead>
                             <tr>
+                                <th width="40"></th>
                                 <th>Pos</th>
                                 <th>Driver</th>
                                 <th>Team</th>
@@ -596,7 +637,7 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="8">Loading live race data...</td>
+                                <td colspan="9">Loading live race data...</td>
                             </tr>
                         </tbody>
                     </table>
