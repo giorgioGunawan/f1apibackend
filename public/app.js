@@ -423,29 +423,56 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`${API_BASE_URL}/driver-standings`)
             .then(response => response.json())
             .then(standings => {
-                driverStandingsTable.innerHTML = standings.length ? '' : '<tr><td colspan="5">No driver standings found</td></tr>';
-                
-                standings.forEach(standing => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${standing.id}</td>
-                        <td>${standing.driver_name}</td>
-                        <td>${standing.team_name}</td>
-                        <td>${standing.points}</td>
-                        <td class="action-buttons">
-                            <button class="btn btn-info edit-driver-standing" data-id="${standing.id}">Edit</button>
-                            <button class="btn btn-danger delete-driver-standing" data-id="${standing.id}">Delete</button>
-                        </td>
-                    `;
-                    driverStandingsTable.appendChild(row);
-                });
-
-                attachDriverStandingButtonListeners();
+                renderDriverStandingsTable(standings);
             })
             .catch(error => {
                 console.error('Error loading driver standings:', error);
                 showAlert('Error loading driver standings', 'danger');
             });
+    }
+
+    // Function to render driver standings table
+    function renderDriverStandingsTable(data) {
+        const tbody = document.querySelector('#driver-standings-table tbody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="6">No driver standings found</td>';
+            tbody.appendChild(row);
+            return;
+        }
+        
+        data.forEach(standing => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${standing.id}</td>
+                <td>${standing.driver_name}</td>
+                <td>${standing.driver_number || ''}</td>
+                <td>${standing.team_name}</td>
+                <td>${standing.points}</td>
+                <td class="action-buttons">
+                    <button class="btn btn-info edit-driver-standing" data-id="${standing.id}">Edit</button>
+                    <button class="btn btn-danger delete-driver-standing" data-id="${standing.id}">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Add event listeners for edit and delete buttons
+        document.querySelectorAll('.edit-driver-standing').forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                editDriverStanding(id);
+            });
+        });
+        
+        document.querySelectorAll('.delete-driver-standing').forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                deleteDriverStanding(id);
+            });
+        });
     }
 
     // Add driver standing
@@ -457,33 +484,11 @@ document.addEventListener('DOMContentLoaded', function() {
         openModal('driver-standing-modal');
     });
 
-    function attachDriverStandingButtonListeners() {
-        document.querySelectorAll('.edit-driver-standing').forEach(button => {
-            button.addEventListener('click', function() {
-                const standingId = this.getAttribute('data-id');
-                editDriverStanding(standingId);
-            });
-        });
-
-        document.querySelectorAll('.delete-driver-standing').forEach(button => {
-            button.addEventListener('click', function() {
-                const standingId = this.getAttribute('data-id');
-                if (confirm('Are you sure you want to delete this driver standing?')) {
-                    deleteDriverStanding(standingId);
-                }
-            });
-        });
-    }
-
     function editDriverStanding(standingId) {
         fetch(`${API_BASE_URL}/driver-standings/${standingId}`)
             .then(response => response.json())
             .then(standing => {
-                document.getElementById('driver-standing-id').value = standing.id;
-                document.getElementById('driver-standing-name').value = standing.driver_name;
-                document.getElementById('driver-standing-team').value = standing.team_name;
-                document.getElementById('driver-standing-points').value = standing.points;
-                
+                populateDriverStandingForm(standing);
                 document.getElementById('driver-standing-form-title').textContent = 'Edit Driver Standing';
                 document.getElementById('driver-standing-submit-btn').textContent = 'Update Standing';
                 openModal('driver-standing-modal');
@@ -509,38 +514,50 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle driver standing form submission
-    driverStandingForm.addEventListener('submit', function(e) {
+    // Function to populate driver standing form for editing
+    function populateDriverStandingForm(data) {
+        document.getElementById('driver-standing-id').value = data.id || '';
+        document.getElementById('driver-standing-name').value = data.driver_name || '';
+        document.getElementById('driver-standing-team').value = data.team_name || '';
+        document.getElementById('driver-standing-points').value = data.points || '';
+        document.getElementById('driver-standing-number').value = data.driver_number || '';
+    }
+
+    // Event listener for driver standing form submission
+    document.getElementById('driver-standing-form').addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const standingId = document.getElementById('driver-standing-id').value;
-        const standingData = {
+        const id = document.getElementById('driver-standing-id').value;
+        const data = {
             driver_name: document.getElementById('driver-standing-name').value,
             team_name: document.getElementById('driver-standing-team').value,
-            points: Number(document.getElementById('driver-standing-points').value)
+            points: parseFloat(document.getElementById('driver-standing-points').value),
+            driver_number: document.getElementById('driver-standing-number').value || null
         };
-
-        const method = standingId ? 'PUT' : 'POST';
-        const url = standingId ? 
-            `${API_BASE_URL}/driver-standings/${standingId}` : 
-            `${API_BASE_URL}/driver-standings`;
-
+        
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/driver-standings/${id}` : '/api/driver-standings';
+        
         fetch(url, {
             method: method,
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(standingData)
+            body: JSON.stringify(data)
         })
-        .then(response => response.json())
-        .then(() => {
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
             closeModal('driver-standing-modal');
             loadDriverStandings();
-            showAlert(`Driver standing ${standingId ? 'updated' : 'added'} successfully`);
         })
         .catch(error => {
-            console.error('Error saving driver standing:', error);
-            showAlert('Error saving driver standing', 'danger');
+            console.error('Error:', error);
+            alert('There was a problem saving the driver standing');
         });
     });
 
@@ -557,28 +574,57 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`${API_BASE_URL}/constructor-standings`)
             .then(response => response.json())
             .then(standings => {
-                constructorStandingsTable.innerHTML = standings.length ? '' : '<tr><td colspan="4">No constructor standings found</td></tr>';
-                
-                standings.forEach(standing => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${standing.id}</td>
-                        <td>${standing.constructor_name}</td>
-                        <td>${standing.points}</td>
-                        <td class="action-buttons">
-                            <button class="btn btn-info edit-constructor-standing" data-id="${standing.id}">Edit</button>
-                            <button class="btn btn-danger delete-constructor-standing" data-id="${standing.id}">Delete</button>
-                        </td>
-                    `;
-                    constructorStandingsTable.appendChild(row);
-                });
-
-                attachConstructorStandingButtonListeners();
+                renderConstructorStandingsTable(standings);
             })
             .catch(error => {
                 console.error('Error loading constructor standings:', error);
                 showAlert('Error loading constructor standings', 'danger');
             });
+    }
+
+    // Function to render constructor standings table
+    function renderConstructorStandingsTable(data) {
+        const tbody = document.querySelector('#constructor-standings-table tbody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="7">No constructor standings found</td>';
+            tbody.appendChild(row);
+            return;
+        }
+        
+        data.forEach(standing => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${standing.id}</td>
+                <td>${standing.constructor_name}</td>
+                <td>${standing.points}</td>
+                <td>${standing.driver_name_1 || ''}</td>
+                <td>${standing.driver_name_2 || ''}</td>
+                <td>${standing.driver_name_3 || ''}</td>
+                <td class="action-buttons">
+                    <button class="btn btn-info edit-constructor-standing" data-id="${standing.id}">Edit</button>
+                    <button class="btn btn-danger delete-constructor-standing" data-id="${standing.id}">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Add event listeners for edit and delete buttons
+        document.querySelectorAll('.edit-constructor-standing').forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                editConstructorStanding(id);
+            });
+        });
+        
+        document.querySelectorAll('.delete-constructor-standing').forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                deleteConstructorStanding(id);
+            });
+        });
     }
 
     // Add constructor standing
@@ -590,32 +636,11 @@ document.addEventListener('DOMContentLoaded', function() {
         openModal('constructor-standing-modal');
     });
 
-    function attachConstructorStandingButtonListeners() {
-        document.querySelectorAll('.edit-constructor-standing').forEach(button => {
-            button.addEventListener('click', function() {
-                const standingId = this.getAttribute('data-id');
-                editConstructorStanding(standingId);
-            });
-        });
-
-        document.querySelectorAll('.delete-constructor-standing').forEach(button => {
-            button.addEventListener('click', function() {
-                const standingId = this.getAttribute('data-id');
-                if (confirm('Are you sure you want to delete this constructor standing?')) {
-                    deleteConstructorStanding(standingId);
-                }
-            });
-        });
-    }
-
     function editConstructorStanding(standingId) {
         fetch(`${API_BASE_URL}/constructor-standings/${standingId}`)
             .then(response => response.json())
             .then(standing => {
-                document.getElementById('constructor-standing-id').value = standing.id;
-                document.getElementById('constructor-standing-name').value = standing.constructor_name;
-                document.getElementById('constructor-standing-points').value = standing.points;
-                
+                populateConstructorStandingForm(standing);
                 document.getElementById('constructor-standing-form-title').textContent = 'Edit Constructor Standing';
                 document.getElementById('constructor-standing-submit-btn').textContent = 'Update Standing';
                 openModal('constructor-standing-modal');
@@ -641,37 +666,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle constructor standing form submission
-    constructorStandingForm.addEventListener('submit', function(e) {
+    // Function to populate constructor standing form for editing
+    function populateConstructorStandingForm(data) {
+        document.getElementById('constructor-standing-id').value = data.id || '';
+        document.getElementById('constructor-standing-name').value = data.constructor_name || '';
+        document.getElementById('constructor-standing-points').value = data.points || '';
+        document.getElementById('constructor-standing-driver1').value = data.driver_name_1 || '';
+        document.getElementById('constructor-standing-driver2').value = data.driver_name_2 || '';
+        document.getElementById('constructor-standing-driver3').value = data.driver_name_3 || '';
+    }
+
+    // Event listener for constructor standing form submission
+    document.getElementById('constructor-standing-form').addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const standingId = document.getElementById('constructor-standing-id').value;
-        const standingData = {
+        const id = document.getElementById('constructor-standing-id').value;
+        const data = {
             constructor_name: document.getElementById('constructor-standing-name').value,
-            points: Number(document.getElementById('constructor-standing-points').value)
+            points: parseFloat(document.getElementById('constructor-standing-points').value),
+            driver_name_1: document.getElementById('constructor-standing-driver1').value || null,
+            driver_name_2: document.getElementById('constructor-standing-driver2').value || null,
+            driver_name_3: document.getElementById('constructor-standing-driver3').value || null
         };
-
-        const method = standingId ? 'PUT' : 'POST';
-        const url = standingId ? 
-            `${API_BASE_URL}/constructor-standings/${standingId}` : 
-            `${API_BASE_URL}/constructor-standings`;
-
+        
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/constructor-standings/${id}` : '/api/constructor-standings';
+        
         fetch(url, {
             method: method,
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(standingData)
+            body: JSON.stringify(data)
         })
-        .then(response => response.json())
-        .then(() => {
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
             closeModal('constructor-standing-modal');
             loadConstructorStandings();
-            showAlert(`Constructor standing ${standingId ? 'updated' : 'added'} successfully`);
         })
         .catch(error => {
-            console.error('Error saving constructor standing:', error);
-            showAlert('Error saving constructor standing', 'danger');
+            console.error('Error:', error);
+            alert('There was a problem saving the constructor standing');
         });
     });
 
