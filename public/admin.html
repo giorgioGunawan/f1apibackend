@@ -289,6 +289,155 @@
                 padding: 8px 15px;
             }
         }
+
+        /* Widget Styles */
+        .widgets-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .widget {
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            width: 300px;
+            min-height: 200px;
+        }
+        
+        .widget-header {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .widget-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .widget-selector {
+            background-color: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .widget-selector option {
+            background-color: white;
+            color: var(--dark-gray);
+        }
+        
+        .widget-content {
+            padding: 15px;
+            min-height: 150px;
+        }
+        
+        .widget-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 150px;
+            color: var(--accent-color);
+            font-style: italic;
+        }
+        
+        /* Racing Widget */
+        .racing-widget .race-round {
+            font-size: 14px;
+            color: var(--primary-color);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .racing-widget .race-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .racing-widget .race-location {
+            font-size: 14px;
+            color: var(--dark-gray);
+            margin-bottom: 5px;
+        }
+        
+        .racing-widget .race-dates {
+            font-size: 14px;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+        
+        .racing-widget .race-countdown {
+            background-color: var(--light-gray);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        /* Driver Widget */
+        .driver-widget .driver-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .driver-widget .driver-number {
+            background-color: var(--secondary-color);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin-right: 15px;
+        }
+        
+        .driver-widget .driver-name {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .driver-widget .driver-team {
+            font-size: 14px;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+        
+        .driver-widget .driver-stats {
+            display: flex;
+            justify-content: space-between;
+            background-color: var(--light-gray);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .driver-widget .stat {
+            text-align: center;
+        }
+        
+        .driver-widget .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+        
+        .driver-widget .stat-label {
+            font-size: 12px;
+            color: var(--accent-color);
+        }
     </style>
 </head>
 <body>
@@ -304,6 +453,7 @@
                 <li data-section="driver-standings">Driver Standings</li>
                 <li data-section="constructor-standings">Constructor Standings</li>
                 <li data-section="live-race">Live Race</li>
+                <li data-section="widgets">Widgets</li>
             </ul>
         </div>
 
@@ -319,7 +469,6 @@
                     <table class="data-table" id="races-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Round</th>
                                 <th>Name</th>
                                 <th>Location</th>
@@ -330,7 +479,7 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="7">Loading races...</td>
+                                <td colspan="6">Loading races...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -341,13 +490,15 @@
             <div id="results" class="section">
                 <div class="page-header">
                     <h2>Results</h2>
-                    <button id="add-result-btn" class="btn btn-primary">Add Result</button>
+                    <div>
+                        <button id="add-result-btn" class="btn btn-primary">Add Single Result</button>
+                        <button id="add-batch-results-btn" class="btn btn-info">Add Batch Results</button>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table class="data-table" id="results-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Race</th>
                                 <th>Session</th>
                                 <th>Position</th>
@@ -360,7 +511,7 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="9">Loading results...</td>
+                                <td colspan="8">Loading results...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -377,7 +528,6 @@
                     <table class="data-table" id="driver-standings-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Driver</th>
                                 <th>Number</th>
                                 <th>Team</th>
@@ -387,7 +537,7 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="6">Loading driver standings...</td>
+                                <td colspan="5">Loading driver standings...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -404,7 +554,6 @@
                     <table class="data-table" id="constructor-standings-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Constructor</th>
                                 <th>Points</th>
                                 <th>Driver 1</th>
@@ -415,7 +564,7 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="7">Loading constructor standings...</td>
+                                <td colspan="6">Loading constructor standings...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -451,6 +600,41 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Widgets Section -->
+            <div id="widgets" class="section">
+                <div class="page-header">
+                    <h2>iPhone Widgets</h2>
+                    <div>
+                        <button id="refresh-widgets-btn" class="btn btn-primary">Refresh Data</button>
+                    </div>
+                </div>
+                
+                <div class="widgets-container">
+                    <!-- Racing Widget -->
+                    <div class="widget racing-widget">
+                        <div class="widget-header">
+                            <h3>Next Race</h3>
+                        </div>
+                        <div class="widget-content" id="racing-widget-content">
+                            <div class="widget-loading">Loading race data...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Driver Widget -->
+                    <div class="widget driver-widget">
+                        <div class="widget-header">
+                            <h3>Driver Info</h3>
+                            <select id="driver-widget-selector" class="widget-selector">
+                                <option value="">Select Driver</option>
+                            </select>
+                        </div>
+                        <div class="widget-content" id="driver-widget-content">
+                            <div class="widget-loading">Select a driver</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -549,11 +733,13 @@
                 </div>
                 <div class="form-group">
                     <label for="result-driver">Driver:</label>
-                    <input type="text" id="result-driver" class="form-control" required>
+                    <select id="result-driver" class="form-control" required>
+                        <option value="">Select Driver</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="result-team">Team:</label>
-                    <input type="text" id="result-team" class="form-control" required>
+                    <input type="text" id="result-team" class="form-control" required readonly>
                 </div>
                 <div class="form-group">
                     <label for="result-time">Time:</label>
@@ -565,7 +751,7 @@
                 </div>
                 <div class="form-group">
                     <label for="result-points">Points:</label>
-                    <input type="number" id="result-points" class="form-control" min="0">
+                    <input type="number" id="result-points" class="form-control" min="0" step="0.01">
                 </div>
                 <div class="form-buttons">
                     <button type="button" class="btn" id="result-cancel-btn">Cancel</button>
@@ -682,6 +868,61 @@
                 <div class="form-buttons">
                     <button type="button" class="btn" id="live-race-cancel-btn">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="live-race-submit-btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Batch Results Modal -->
+    <div id="batch-results-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <span class="close-modal">&times;</span>
+            <h2>Add Batch Results</h2>
+            <form id="batch-results-form">
+                <div class="form-group">
+                    <label for="batch-race">Race:</label>
+                    <select id="batch-race" class="form-control" required>
+                        <option value="">Select Race</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="batch-session">Session Type:</label>
+                    <select id="batch-session" class="form-control" required>
+                        <option value="fp1">Practice 1</option>
+                        <option value="fp2">Practice 2</option>
+                        <option value="fp3">Practice 3</option>
+                        <option value="sprint">Sprint</option>
+                        <option value="qualifying">Qualifying</option>
+                        <option value="race">Race</option>
+                    </select>
+                </div>
+                
+                <div class="table-container" style="margin-top: 20px;">
+                    <table class="data-table" id="batch-results-table">
+                        <thead>
+                            <tr>
+                                <th>Position</th>
+                                <th>Driver</th>
+                                <th>Team</th>
+                                <th>Time</th>
+                                <th>Laps</th>
+                                <th>Points</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be added dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <button type="button" class="btn btn-info" id="add-batch-row-btn">Add Row</button>
+                    <button type="button" class="btn btn-danger" id="clear-batch-rows-btn">Clear All</button>
+                </div>
+                
+                <div class="form-buttons">
+                    <button type="button" class="btn" id="batch-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="batch-submit-btn">Save All Results</button>
                 </div>
             </form>
         </div>
