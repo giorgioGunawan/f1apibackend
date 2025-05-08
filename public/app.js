@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load races
     function loadRaces() {
-        fetch('https://f1apibackend-1.onrender.com/api/races')
+        fetch('api/races')
             .then(response => response.json())
             .then(races => {
                 const tableBody = document.querySelector('#races-table tbody');
@@ -587,14 +587,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultForm = document.getElementById('result-form');
 
     function loadResults() {
-        fetch('https://f1apibackend-1.onrender.com/api/results')
+        fetch('api/results')
             .then(response => response.json())
             .then(results => {
                 const tableBody = document.querySelector('#results-table tbody');
                 tableBody.innerHTML = '';
                 
                 // Also fetch races to get race names
-                fetch('https://f1apibackend-1.onrender.com/api/races')
+                fetch('api/races')
                     .then(response => response.json())
                     .then(races => {
                         const raceMap = {};
@@ -914,7 +914,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const constructorStandingForm = document.getElementById('constructor-standing-form');
 
     function loadConstructorStandings() {
-        fetch('https://f1apibackend-1.onrender.com/api/constructor-standings')
+        fetch('api/constructor-standings')
             .then(response => response.json())
             .then(standings => {
                 const tableBody = document.querySelector('#constructor-standings-table tbody');
@@ -1063,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const liveRaceForm = document.getElementById('live-race-form');
 
     function loadLiveRace() {
-        fetch('https://f1apibackend-1.onrender.com/api/live-race')
+        fetch('api/live-race')
             .then(response => response.json())
             .then(entries => {
                 const tableBody = document.querySelector('#live-race-table tbody');
@@ -1097,6 +1097,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Add event listeners for edit and delete buttons
                 addLiveRaceEventListeners();
+                
+                // Create the batch update button
+                createBatchUpdateButton();
                 
                 // Initialize drag and drop
                 setTimeout(() => {
@@ -1261,7 +1264,7 @@ function initializeRacingWidget() {
     widgetContent.innerHTML = '<div class="widget-loading">Loading race data...</div>';
     
     // Fetch races data from the correct API endpoint
-    fetch('https://f1apibackend-1.onrender.com/api/races')
+    fetch('api/races')
         .then(response => response.json())
         .then(races => {
             // Find the next upcoming race
@@ -1358,7 +1361,7 @@ function initializeDriverSelector() {
     }
     
     // Fetch driver standings from the correct API endpoint
-    fetch('https://f1apibackend-1.onrender.com/api/driver-standings')
+    fetch('api/driver-standings')
         .then(response => response.json())
         .then(drivers => {
             // Sort drivers by points (descending)
@@ -1461,7 +1464,7 @@ function formatSessionType(sessionType) {
     }
 }
 
-// Improved drag and drop functionality for live race table
+// Completely revised drag and drop functionality
 function initDragAndDrop() {
     const tbody = document.querySelector('#live-race-table tbody');
     let draggedItem = null;
@@ -1473,10 +1476,6 @@ function initDragAndDrop() {
         if (dragHandle) {
             dragHandle.addEventListener('mousedown', function() {
                 row.draggable = true;
-            });
-            
-            row.addEventListener('mouseleave', function() {
-                row.draggable = false;
             });
         }
         
@@ -1494,7 +1493,7 @@ function initDragAndDrop() {
             this.draggable = false;
             
             // Update positions in the database
-            updatePositions();
+            savePositionsToServer();
         });
         
         // Drag over
@@ -1511,6 +1510,9 @@ function initDragAndDrop() {
             } else {
                 tbody.insertBefore(draggedItem, this.nextSibling);
             }
+            
+            // Update row numbers visually
+            updateRowNumbers();
         });
     });
     
@@ -1521,7 +1523,6 @@ function initDragAndDrop() {
     
     tbody.addEventListener('drop', function(e) {
         e.preventDefault();
-        // Update row numbers visually
         updateRowNumbers();
     });
 }
@@ -1537,56 +1538,79 @@ function updateRowNumbers() {
     });
 }
 
-// Update positions in the database
-function updatePositions() {
+// Save positions to server - completely revised approach
+function savePositionsToServer() {
     const rows = Array.from(document.querySelectorAll('#live-race-table tbody tr'));
     
-    // First update the visual positions
-    updateRowNumbers();
-    
-    // Then prepare the updates for the server
-    const updatePromises = rows.map((row, index) => {
-        const id = row.dataset.id;
-        const newPosition = index + 1;
-        
-        console.log(`Updating entry ID ${id} to position ${newPosition}`);
-        
-        // Return the promise from the fetch call
-        return fetch(`https://f1apibackend-1.onrender.com/api/live-race/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                position: newPosition 
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Failed to update position for ID ${id}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log(`Successfully updated position for ID ${id}`, data);
-            return data;
-        })
-        .catch(error => {
-            console.error(`Error updating position for ID ${id}:`, error);
-            throw error;
-        });
+    // Create an array of updates
+    const updates = rows.map((row, index) => {
+        return {
+            id: row.dataset.id,
+            position: index + 1
+        };
     });
     
-    // Wait for all updates to complete
-    Promise.all(updatePromises)
-        .then(() => {
-            console.log('All positions updated successfully');
-            // Reload the live race data to ensure everything is in sync
-            loadLiveRace();
-        })
-        .catch(error => {
-            console.error('Error updating positions:', error);
-            // Still reload to get the current state from the server
-            loadLiveRace();
-        });
-} 
+    console.log('Preparing to update positions:', updates);
+    
+    // Send each update individually
+    updates.forEach(update => {
+        // Get the current entry data first
+        fetch(`api/live-race/${update.id}`)
+            .then(response => response.json())
+            .then(entry => {
+                // Now update with the new position while preserving other data
+                const updatedEntry = {
+                    ...entry,
+                    position: update.position
+                };
+                
+                return fetch(`api/live-race/${update.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updatedEntry)
+                });
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to update position for ID ${update.id}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(`Successfully updated position for ID ${update.id} to ${update.position}`, data);
+            })
+            .catch(error => {
+                console.error(`Error updating position for ID ${update.id}:`, error);
+            });
+    });
+}
+
+// Alternative approach - update all positions at once with a batch endpoint
+function createBatchUpdateButton() {
+    // Add a button to manually trigger position updates
+    const actionsDiv = document.querySelector('#live-race .page-header div');
+    
+    if (actionsDiv && !document.getElementById('update-positions-btn')) {
+        const updateButton = document.createElement('button');
+        updateButton.id = 'update-positions-btn';
+        updateButton.className = 'btn btn-info';
+        updateButton.textContent = 'Save Positions';
+        updateButton.addEventListener('click', savePositionsToServer);
+        
+        actionsDiv.appendChild(updateButton);
+    }
+}
+
+// Make sure to call this when the document is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Existing code...
+    
+    // Add event listener for the live race tab
+    document.querySelector('.sidebar-menu li[data-section="live-race"]').addEventListener('click', function() {
+        setTimeout(() => {
+            initDragAndDrop();
+        }, 200);
+    });
+}); 
