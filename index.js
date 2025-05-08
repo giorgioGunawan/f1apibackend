@@ -426,14 +426,14 @@ app.get('/api/driver-standings/:id', (req, res) => {
 
 // Add a new driver standing
 app.post('/api/driver-standings', (req, res) => {
-  const { driver_name, team_name, points } = req.body;
+  const { driver_name, team_name, points, driver_number } = req.body;
   
   if (!driver_name || !team_name || points === undefined) {
     return res.status(400).json({ error: 'Please provide driver_name, team_name, and points' });
   }
   
-  db.run(`INSERT INTO driver_standings (driver_name, team_name, points) VALUES (?, ?, ?)`,
-    [driver_name, team_name, points],
+  db.run(`INSERT INTO driver_standings (driver_name, team_name, points, driver_number) VALUES (?, ?, ?, ?)`,
+    [driver_name, team_name, points, driver_number || null],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -442,21 +442,22 @@ app.post('/api/driver-standings', (req, res) => {
         id: this.lastID,
         driver_name,
         team_name,
-        points
+        points,
+        driver_number
       });
     });
 });
 
 // Update a driver standing
 app.put('/api/driver-standings/:id', (req, res) => {
-  const { driver_name, team_name, points } = req.body;
+  const { driver_name, team_name, points, driver_number } = req.body;
   
   if (!driver_name || !team_name || points === undefined) {
     return res.status(400).json({ error: 'Please provide driver_name, team_name, and points' });
   }
   
-  db.run(`UPDATE driver_standings SET driver_name = ?, team_name = ?, points = ? WHERE id = ?`,
-    [driver_name, team_name, points, req.params.id],
+  db.run(`UPDATE driver_standings SET driver_name = ?, team_name = ?, points = ?, driver_number = ? WHERE id = ?`,
+    [driver_name, team_name, points, driver_number || null, req.params.id],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -468,7 +469,8 @@ app.put('/api/driver-standings/:id', (req, res) => {
         id: parseInt(req.params.id),
         driver_name,
         team_name,
-        points
+        points,
+        driver_number
       });
     });
 });
@@ -512,14 +514,14 @@ app.get('/api/constructor-standings/:id', (req, res) => {
 
 // Add a new constructor standing
 app.post('/api/constructor-standings', (req, res) => {
-  const { constructor_name, points } = req.body;
+  const { constructor_name, points, driver_name_1, driver_name_2, driver_name_3 } = req.body;
   
   if (!constructor_name || points === undefined) {
     return res.status(400).json({ error: 'Please provide constructor_name and points' });
   }
   
-  db.run(`INSERT INTO constructor_standings (constructor_name, points) VALUES (?, ?)`,
-    [constructor_name, points],
+  db.run(`INSERT INTO constructor_standings (constructor_name, points, driver_name_1, driver_name_2, driver_name_3) VALUES (?, ?, ?, ?, ?)`,
+    [constructor_name, points, driver_name_1 || null, driver_name_2 || null, driver_name_3 || null],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -527,21 +529,24 @@ app.post('/api/constructor-standings', (req, res) => {
       res.status(201).json({
         id: this.lastID,
         constructor_name,
-        points
+        points,
+        driver_name_1,
+        driver_name_2,
+        driver_name_3
       });
     });
 });
 
 // Update a constructor standing
 app.put('/api/constructor-standings/:id', (req, res) => {
-  const { constructor_name, points } = req.body;
+  const { constructor_name, points, driver_name_1, driver_name_2, driver_name_3 } = req.body;
   
   if (!constructor_name || points === undefined) {
     return res.status(400).json({ error: 'Please provide constructor_name and points' });
   }
   
-  db.run(`UPDATE constructor_standings SET constructor_name = ?, points = ? WHERE id = ?`,
-    [constructor_name, points, req.params.id],
+  db.run(`UPDATE constructor_standings SET constructor_name = ?, points = ?, driver_name_1 = ?, driver_name_2 = ?, driver_name_3 = ? WHERE id = ?`,
+    [constructor_name, points, driver_name_1 || null, driver_name_2 || null, driver_name_3 || null, req.params.id],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -552,7 +557,10 @@ app.put('/api/constructor-standings/:id', (req, res) => {
       res.json({
         id: parseInt(req.params.id),
         constructor_name,
-        points
+        points,
+        driver_name_1,
+        driver_name_2,
+        driver_name_3
       });
     });
 });
