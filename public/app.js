@@ -499,30 +499,32 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Edit race
-    function editRace(raceId) {
-        fetch('/api/races/' + raceId)
+    function editRace(id) {
+        fetch(`https://f1-race-api.onrender.com/api/races/${id}`)
             .then(response => response.json())
             .then(race => {
+                document.getElementById('race-form-title').textContent = 'Edit Race';
                 document.getElementById('race-id').value = race.id;
-                document.getElementById('race-round').value = race.round || '';
+                document.getElementById('race-round').value = race.round;
                 document.getElementById('race-name').value = race.name;
                 document.getElementById('race-location').value = race.location;
+                
+                // Convert UTC timestamps to local datetime for form inputs
                 document.getElementById('race-fp1-date').value = utcTimestampToLocalDateTime(race.datetime_fp1);
                 document.getElementById('race-fp2-date').value = utcTimestampToLocalDateTime(race.datetime_fp2);
                 document.getElementById('race-fp3-date').value = utcTimestampToLocalDateTime(race.datetime_fp3);
+                document.getElementById('race-sprint-date').value = utcTimestampToLocalDateTime(race.datetime_sprint);
                 document.getElementById('race-qualifying-date').value = utcTimestampToLocalDateTime(race.datetime_qualifying);
                 document.getElementById('race-race-date').value = utcTimestampToLocalDateTime(race.datetime_race);
+                
                 document.getElementById('race-first').value = race.first_place || '';
                 document.getElementById('race-second').value = race.second_place || '';
                 document.getElementById('race-third').value = race.third_place || '';
                 
-                document.getElementById('race-form-title').textContent = 'Edit Race';
-                document.getElementById('race-submit-btn').textContent = 'Update Race';
                 openModal('race-modal');
             })
             .catch(error => {
-                console.error('Error loading race:', error);
-                showAlert('Error loading race details', 'danger');
+                console.error('Error fetching race:', error);
             });
     }
 
@@ -559,6 +561,7 @@ document.addEventListener('DOMContentLoaded', function() {
             datetime_fp1: localDateTimeToUTCTimestamp(document.getElementById('race-fp1-date').value),
             datetime_fp2: localDateTimeToUTCTimestamp(document.getElementById('race-fp2-date').value),
             datetime_fp3: localDateTimeToUTCTimestamp(document.getElementById('race-fp3-date').value),
+            datetime_sprint: localDateTimeToUTCTimestamp(document.getElementById('race-sprint-date').value),
             datetime_qualifying: localDateTimeToUTCTimestamp(document.getElementById('race-qualifying-date').value),
             datetime_race: localDateTimeToUTCTimestamp(document.getElementById('race-race-date').value),
             
@@ -568,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         // API endpoint and method
-        const url = isEdit ? '/api/races/' + id : '/api/races';
+        const url = isEdit ? `https://f1-race-api.onrender.com/api/races/${id}` : 'https://f1-race-api.onrender.com/api/races';
         const method = isEdit ? 'PUT' : 'POST';
         
         // Send request
