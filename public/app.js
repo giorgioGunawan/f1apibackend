@@ -507,12 +507,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('race-round').value = race.round || '';
                 document.getElementById('race-name').value = race.name;
                 document.getElementById('race-location').value = race.location;
-                document.getElementById('race-fp1').value = formatDateTimeForInput(race.datetime_fp1);
-                document.getElementById('race-fp2').value = formatDateTimeForInput(race.datetime_fp2);
-                document.getElementById('race-fp3').value = formatDateTimeForInput(race.datetime_fp3);
-                document.getElementById('race-sprint').value = formatDateTimeForInput(race.datetime_sprint);
-                document.getElementById('race-qualifying').value = formatDateTimeForInput(race.datetime_qualifying);
-                document.getElementById('race-race').value = formatDateTimeForInput(race.datetime_race);
+                document.getElementById('race-fp1-date').value = utcTimestampToLocalDateTime(race.datetime_fp1);
+                document.getElementById('race-fp2-date').value = utcTimestampToLocalDateTime(race.datetime_fp2);
+                document.getElementById('race-fp3-date').value = utcTimestampToLocalDateTime(race.datetime_fp3);
+                document.getElementById('race-qualifying-date').value = utcTimestampToLocalDateTime(race.datetime_qualifying);
+                document.getElementById('race-race-date').value = utcTimestampToLocalDateTime(race.datetime_race);
                 document.getElementById('race-first').value = race.first_place || '';
                 document.getElementById('race-second').value = race.second_place || '';
                 document.getElementById('race-third').value = race.third_place || '';
@@ -547,37 +546,44 @@ document.addEventListener('DOMContentLoaded', function() {
     raceForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const raceId = document.getElementById('race-id').value;
-        const raceData = {
-            round: document.getElementById('race-round').value || null,
+        const id = document.getElementById('race-id').value;
+        const isEdit = id !== '';
+        
+        // Get form values
+        const race = {
+            round: document.getElementById('race-round').value,
             name: document.getElementById('race-name').value,
             location: document.getElementById('race-location').value,
-            datetime_fp1: timestampFromInput(document.getElementById('race-fp1').value),
-            datetime_fp2: timestampFromInput(document.getElementById('race-fp2').value),
-            datetime_fp3: timestampFromInput(document.getElementById('race-fp3').value),
-            datetime_sprint: timestampFromInput(document.getElementById('race-sprint').value),
-            datetime_qualifying: timestampFromInput(document.getElementById('race-qualifying').value),
-            datetime_race: timestampFromInput(document.getElementById('race-race').value),
+            
+            // Convert local datetime to UTC timestamps
+            datetime_fp1: localDateTimeToUTCTimestamp(document.getElementById('race-fp1-date').value),
+            datetime_fp2: localDateTimeToUTCTimestamp(document.getElementById('race-fp2-date').value),
+            datetime_fp3: localDateTimeToUTCTimestamp(document.getElementById('race-fp3-date').value),
+            datetime_qualifying: localDateTimeToUTCTimestamp(document.getElementById('race-qualifying-date').value),
+            datetime_race: localDateTimeToUTCTimestamp(document.getElementById('race-race-date').value),
+            
             first_place: document.getElementById('race-first').value || null,
             second_place: document.getElementById('race-second').value || null,
             third_place: document.getElementById('race-third').value || null
         };
-
-        const method = raceId ? 'PUT' : 'POST';
-        const url = raceId ? '/api/races/' + raceId : '/api/races';
-
+        
+        // API endpoint and method
+        const url = isEdit ? '/api/races/' + id : '/api/races';
+        const method = isEdit ? 'PUT' : 'POST';
+        
+        // Send request
         fetch(url, {
             method: method,
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(raceData)
+            body: JSON.stringify(race)
         })
         .then(response => response.json())
-        .then(() => {
+        .then(data => {
             closeModal('race-modal');
             loadRaces();
-            showAlert(`Race ${raceId ? 'updated' : 'added'} successfully`);
+            showAlert(`Race ${isEdit ? 'updated' : 'added'} successfully`);
         })
         .catch(error => {
             console.error('Error saving race:', error);
@@ -1255,6 +1261,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Widget functionality
     initializeWidgets();
+
+    // Display the user's local timezone
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const timezoneDisplay = document.getElementById('local-timezone');
+    if (timezoneDisplay) {
+        timezoneDisplay.textContent = timezone;
+    }
 });
 
 // Widget functionality
@@ -1621,4 +1634,32 @@ document.addEventListener('DOMContentLoaded', function() {
             initDragAndDrop();
         }, 200);
     });
-}); 
+});
+
+// Function to convert local datetime to UTC timestamp
+function localDateTimeToUTCTimestamp(dateTimeStr) {
+    if (!dateTimeStr) return null;
+    
+    // Create a date object from the local datetime string
+    const date = new Date(dateTimeStr);
+    
+    // Convert to UTC timestamp (seconds since epoch)
+    return Math.floor(date.getTime() / 1000);
+}
+
+// Function to convert UTC timestamp to local datetime string
+function utcTimestampToLocalDateTime(timestamp) {
+    if (!timestamp) return '';
+    
+    // Create a date object from the UTC timestamp
+    const date = new Date(timestamp * 1000);
+    
+    // Format for datetime-local input (YYYY-MM-DDTHH:MM)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+} 
