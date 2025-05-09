@@ -419,11 +419,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load races
     function loadRaces() {
-        fetch('api/races')
+        fetch('/api/races')
             .then(response => response.json())
             .then(races => {
                 const tableBody = document.querySelector('#races-table tbody');
                 tableBody.innerHTML = '';
+                
+                // Sort races by round number (lowest to highest)
+                races.sort((a, b) => {
+                    // Convert to numbers to ensure proper numeric sorting
+                    const roundA = parseInt(a.round, 10);
+                    const roundB = parseInt(b.round, 10);
+                    return roundA - roundB;
+                });
                 
                 races.forEach(race => {
                     const row = document.createElement('tr');
