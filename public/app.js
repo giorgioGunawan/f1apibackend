@@ -48,7 +48,27 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // If opening race or live race modals, fetch drivers for dropdowns
         if (modalId === 'race-modal' || modalId === 'live-race-entry-modal') {
-            fetchDriversForDropdowns();
+            fetch('https://f1-race-api.onrender.com/api/driver-standings')
+                .then(response => response.json())
+                .then(drivers => {
+                    driversData = drivers;
+                    
+                    // Sort drivers alphabetically by name
+                    drivers.sort((a, b) => a.driver_name.localeCompare(b.driver_name));
+                    
+                    if (modalId === 'race-modal') {
+                        // Populate race podium dropdowns
+                        populateDriverDropdowns('race-first', drivers);
+                        populateDriverDropdowns('race-second', drivers);
+                        populateDriverDropdowns('race-third', drivers);
+                    } else {
+                        // Populate live race driver dropdown
+                        populateLiveRaceDriverDropdown(drivers);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching drivers:', error);
+                });
         }
     }
 
@@ -425,7 +445,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load races
     function loadRaces() {
-        fetch('/api/races')
+        fetch('https://f1-race-api.onrender.com/api/races')
             .then(response => response.json())
             .then(races => {
                 const tableBody = document.querySelector('#races-table tbody');
@@ -470,6 +490,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Add event listeners for edit and delete buttons
+                console.log('Adding race event listeners');
                 addRaceEventListeners();
             })
             .catch(error => {
@@ -478,37 +499,67 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function addRaceEventListeners() {
+        // Add event listeners for edit buttons
         document.querySelectorAll('.edit-race-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const row = this.closest('tr');
                 const id = row.dataset.id;
+                console.log('Edit race clicked for ID:', id);
                 editRace(id);
             });
         });
-
+        
+        // Add event listeners for delete buttons
         document.querySelectorAll('.delete-race-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const row = this.closest('tr');
                 const id = row.dataset.id;
-                deleteRace(id);
+                if (confirm('Are you sure you want to delete this race?')) {
+                    deleteRace(id);
+                }
             });
         });
     }
 
     // Add race
     document.getElementById('add-race-btn').addEventListener('click', () => {
-        raceForm.reset();
-        document.getElementById('race-id').value = '';
         document.getElementById('race-form-title').textContent = 'Add Race';
-        document.getElementById('race-submit-btn').textContent = 'Add Race';
+        document.getElementById('race-form').reset();
+        document.getElementById('race-id').value = '';
+        
         openModal('race-modal');
+        
+        // Fetch drivers for the dropdowns
+        fetch('/api/driver-standings')
+            .then(response => response.json())
+            .then(drivers => {
+                // Sort drivers alphabetically by name
+                drivers.sort((a, b) => a.driver_name.localeCompare(b.driver_name));
+                
+                // Populate race podium dropdowns
+                populateDriverDropdowns('race-first', drivers);
+                populateDriverDropdowns('race-second', drivers);
+                populateDriverDropdowns('race-third', drivers);
+            })
+            .catch(error => {
+                console.error('Error fetching drivers for new race:', error);
+            });
     });
 
     // Edit race
     function editRace(id) {
+        console.log('Editing race with ID:', id);
+        
         fetch(`/api/races/${id}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(race => {
+                console.log('Fetched race data:', race);
+                
                 document.getElementById('race-form-title').textContent = 'Edit Race';
                 document.getElementById('race-id').value = race.id;
                 document.getElementById('race-round').value = race.round;
@@ -523,18 +574,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('race-qualifying-date').value = utcTimestampToLocalDateTime(race.datetime_qualifying);
                 document.getElementById('race-race-date').value = utcTimestampToLocalDateTime(race.datetime_race);
                 
-                // Fetch drivers first to populate dropdowns
-                fetchDriversForDropdowns().then(() => {
-                    // Set podium selections after dropdowns are populated
+                // Open the modal
+                openModal('race-modal');
+                
+                // Fetch drivers and populate dropdowns
+                return fetch('https://f1-race-api.onrender.com/api/driver-standings');
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(drivers => {
+                console.log('Fetched drivers for dropdowns');
+                
+                // Sort drivers alphabetically by name
+                drivers.sort((a, b) => a.driver_name.localeCompare(b.driver_name));
+                
+                // Populate race podium dropdowns
+                populateDriverDropdowns('race-first', drivers);
+                populateDriverDropdowns('race-second', drivers);
+                populateDriverDropdowns('race-third', drivers);
+                
+                // Fetch the race data again to ensure we have the latest
+                return fetch(`https://f1-race-api.onrender.com/api/races/${id}`);
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(race => {
+                console.log('Setting podium selections:', {
+                    first: race.first_place,
+                    second: race.second_place,
+                    third: race.third_place
+                });
+                
+                // Set the selected values
+                setTimeout(() => {
                     setSelectValue('race-first', race.first_place);
                     setSelectValue('race-second', race.second_place);
                     setSelectValue('race-third', race.third_place);
-                });
-                
-                openModal('race-modal');
+                }, 100);
             })
             .catch(error => {
-                console.error('Error fetching race:', error);
+                console.error('Error in editRace:', error);
+                alert('Error editing race: ' + error.message);
             });
     }
 
@@ -555,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle race form submission
-    raceForm.addEventListener('submit', function(e) {
+    document.getElementById('race-form').addEventListener('submit', function(e) {
         e.preventDefault();
         
         const id = document.getElementById('race-id').value;
@@ -575,13 +663,16 @@ document.addEventListener('DOMContentLoaded', function() {
             datetime_qualifying: localDateTimeToUTCTimestamp(document.getElementById('race-qualifying-date').value),
             datetime_race: localDateTimeToUTCTimestamp(document.getElementById('race-race-date').value),
             
+            // Get podium values from dropdowns
             first_place: document.getElementById('race-first').value || null,
             second_place: document.getElementById('race-second').value || null,
             third_place: document.getElementById('race-third').value || null
         };
         
+        console.log('Submitting race data:', race);
+        
         // API endpoint and method
-        const url = isEdit ? `/api/races/${id}` : '/api/races';
+        const url = isEdit ? `https://f1-race-api.onrender.com/api/races/${id}` : 'https://f1-race-api.onrender.com/api/races';
         const method = isEdit ? 'PUT' : 'POST';
         
         // Send request
@@ -592,15 +683,20 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify(race)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Race saved successfully:', data);
             closeModal('race-modal');
             loadRaces();
-            showAlert(`Race ${isEdit ? 'updated' : 'added'} successfully`);
         })
         .catch(error => {
             console.error('Error saving race:', error);
-            showAlert('Error saving race', 'danger');
+            alert('Error saving race: ' + error.message);
         });
     });
 
@@ -1140,10 +1236,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add live race entry
     document.getElementById('add-live-race-entry-btn').addEventListener('click', () => {
-        liveRaceForm.reset();
-        document.getElementById('live-race-id').value = '';
-        document.getElementById('live-race-form-title').textContent = 'Add Live Race Entry';
-        document.getElementById('live-race-submit-btn').textContent = 'Add Entry';
+        document.getElementById('live-race-entry-form-title').textContent = 'Add Live Race Entry';
+        document.getElementById('live-race-entry-form').reset();
+        document.getElementById('live-race-entry-id').value = '';
+        
+        // Clear hidden fields
+        document.getElementById('live-race-team-name').value = '';
+        document.getElementById('live-race-car-number').value = '';
+        
+        // Set default values
+        document.getElementById('live-race-position').value = '';
+        document.getElementById('live-race-time-behind').value = '';
+        document.getElementById('live-race-current-lap').value = '';
+        document.getElementById('live-race-is-dnf').value = '0';
+        
         openModal('live-race-entry-modal');
     });
 
@@ -1228,7 +1334,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle live race form submission
-    liveRaceForm.addEventListener('submit', function(e) {
+    document.getElementById('live-race-entry-form').addEventListener('submit', function(e) {
         e.preventDefault();
         
         const id = document.getElementById('live-race-entry-id').value;
@@ -1238,19 +1344,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const driverSelect = document.getElementById('live-race-driver');
         const selectedOption = driverSelect.options[driverSelect.selectedIndex];
         
+        // Check if a driver is selected
+        if (!driverSelect.value) {
+            alert('Please select a driver');
+            return;
+        }
+        
         // Get form values
         const entry = {
             driver_name: driverSelect.value,
-            team_name: document.getElementById('live-race-team-name').value,
-            car_number: document.getElementById('live-race-car-number').value,
-            position: document.getElementById('live-race-position').value,
+            team_name: document.getElementById('live-race-team-name').value || selectedOption.dataset.team,
+            car_number: document.getElementById('live-race-car-number').value || selectedOption.dataset.number,
+            position: parseInt(document.getElementById('live-race-position').value, 10),
             time_behind: document.getElementById('live-race-time-behind').value,
-            current_lap: document.getElementById('live-race-current-lap').value,
-            is_dnf: document.getElementById('live-race-is-dnf').value
+            current_lap: parseInt(document.getElementById('live-race-current-lap').value, 10),
+            is_dnf: parseInt(document.getElementById('live-race-is-dnf').value, 10)
         };
         
+        console.log('Submitting live race entry:', entry);
+        
         // API endpoint and method
-        const url = isEdit ? `/api/live-race/${id}` : '/api/live-race';
+        const url = isEdit ? `https://f1-race-api.onrender.com/api/live-race/${id}` : 'https://f1-race-api.onrender.com/api/live-race';
         const method = isEdit ? 'PUT' : 'POST';
         
         // Send request
@@ -1261,13 +1375,20 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify(entry)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Live race entry saved successfully:', data);
             closeModal('live-race-entry-modal');
             loadLiveRace();
         })
         .catch(error => {
             console.error('Error saving live race entry:', error);
+            alert('Error saving live race entry: ' + error.message);
         });
     });
 
@@ -1755,9 +1876,14 @@ function populateLiveRaceDriverDropdown(drivers) {
     
     // Add event listener to update hidden fields when driver is selected
     select.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        document.getElementById('live-race-team-name').value = selectedOption.dataset.team || '';
-        document.getElementById('live-race-car-number').value = selectedOption.dataset.number || '';
+        if (this.selectedIndex > 0) {
+            const selectedOption = this.options[this.selectedIndex];
+            document.getElementById('live-race-team-name').value = selectedOption.dataset.team || '';
+            document.getElementById('live-race-car-number').value = selectedOption.dataset.number || '';
+        } else {
+            document.getElementById('live-race-team-name').value = '';
+            document.getElementById('live-race-car-number').value = '';
+        }
     });
 }
 
@@ -1770,13 +1896,18 @@ function setSelectValue(selectId, value) {
     }
     
     // Try to find the option with the exact value
+    let found = false;
     for (let i = 0; i < select.options.length; i++) {
         if (select.options[i].value === value) {
             select.selectedIndex = i;
-            return;
+            found = true;
+            break;
         }
     }
     
-    // If not found, default to empty
-    select.value = '';
+    // If not found and there are options, log a warning
+    if (!found && select.options.length > 1) {
+        console.warn(`Could not find option with value "${value}" in select "${selectId}"`);
+        console.log('Available options:', Array.from(select.options).map(o => o.value));
+    }
 } 
