@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // If opening race or live race modals, fetch drivers for dropdowns
         if (modalId === 'race-modal' || modalId === 'live-race-entry-modal') {
-            fetch('https://f1-race-api.onrender.com/api/driver-standings')
+            fetch('/api/driver-standings')
                 .then(response => response.json())
                 .then(drivers => {
                     driversData = drivers;
@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load races
     function loadRaces() {
-        fetch('https://f1-race-api.onrender.com/api/races')
+        fetch('/api/races')
             .then(response => response.json())
             .then(races => {
                 const tableBody = document.querySelector('#races-table tbody');
@@ -578,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 openModal('race-modal');
                 
                 // Fetch drivers and populate dropdowns
-                return fetch('https://f1-race-api.onrender.com/api/driver-standings');
+                return fetch('/api/driver-standings');
             })
             .then(response => {
                 if (!response.ok) {
@@ -598,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 populateDriverDropdowns('race-third', drivers);
                 
                 // Fetch the race data again to ensure we have the latest
-                return fetch(`https://f1-race-api.onrender.com/api/races/${id}`);
+                return fetch(`/api/races/${id}`);
             })
             .then(response => {
                 if (!response.ok) {
@@ -672,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Submitting race data:', race);
         
         // API endpoint and method
-        const url = isEdit ? `https://f1-race-api.onrender.com/api/races/${id}` : 'https://f1-race-api.onrender.com/api/races';
+        const url = isEdit ? `/api/races/${id}` : '/api/races';
         const method = isEdit ? 'PUT' : 'POST';
         
         // Send request
@@ -1364,7 +1364,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Submitting live race entry:', entry);
         
         // API endpoint and method
-        const url = isEdit ? `https://f1-race-api.onrender.com/api/live-race/${id}` : 'https://f1-race-api.onrender.com/api/live-race';
+        const url = isEdit ? `/api/live-race/${id}` : '/api/live-race';
         const method = isEdit ? 'PUT' : 'POST';
         
         // Send request
