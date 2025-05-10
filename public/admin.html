@@ -732,6 +732,10 @@
                     <input type="datetime-local" id="race-fp3-date" class="form-control" required>
                 </div>
                 <div class="form-group">
+                    <label for="race-sprint-date">Sprint Date:</label>
+                    <input type="datetime-local" id="race-sprint-date" class="form-control">
+                </div>
+                <div class="form-group">
                     <label for="race-qualifying-date">Qualifying Date:</label>
                     <input type="datetime-local" id="race-qualifying-date" class="form-control" required>
                 </div>
@@ -741,15 +745,24 @@
                 </div>
                 <div class="form-group">
                     <label for="race-first">First Place:</label>
-                    <input type="text" id="race-first" class="form-control">
+                    <select id="race-first" class="form-control">
+                        <option value="">-- Race not completed --</option>
+                        <!-- Driver options will be populated dynamically -->
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="race-second">Second Place:</label>
-                    <input type="text" id="race-second" class="form-control">
+                    <select id="race-second" class="form-control">
+                        <option value="">-- Race not completed --</option>
+                        <!-- Driver options will be populated dynamically -->
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="race-third">Third Place:</label>
-                    <input type="text" id="race-third" class="form-control">
+                    <select id="race-third" class="form-control">
+                        <option value="">-- Race not completed --</option>
+                        <!-- Driver options will be populated dynamically -->
+                    </select>
                 </div>
                 <div class="form-buttons">
                     <button type="button" class="btn" id="race-cancel-btn">Cancel</button>
@@ -884,46 +897,47 @@
     </div>
 
     <!-- Live Race Entry Modal -->
-    <div id="live-race-modal" class="modal">
+    <div id="live-race-entry-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2 id="live-race-form-title">Add Live Race Entry</h2>
-            <form id="live-race-form">
-                <input type="hidden" id="live-race-id">
+            <h2 id="live-race-entry-form-title">Add Live Race Entry</h2>
+            <form id="live-race-entry-form">
+                <input type="hidden" id="live-race-entry-id">
+                
                 <div class="form-group">
-                    <label for="live-race-driver">Driver Name:</label>
-                    <input type="text" id="live-race-driver" class="form-control" required>
+                    <label for="live-race-driver">Driver:</label>
+                    <select id="live-race-driver" class="form-control" required>
+                        <option value="">Select Driver</option>
+                        <!-- Driver options will be populated dynamically -->
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label for="live-race-team">Team Name:</label>
-                    <input type="text" id="live-race-team" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="live-race-car">Car Number:</label>
-                    <input type="number" id="live-race-car" class="form-control" required min="1">
-                </div>
+                
+                <!-- Hidden fields that will be populated based on driver selection -->
+                <input type="hidden" id="live-race-team-name">
+                <input type="hidden" id="live-race-car-number">
+                
                 <div class="form-group">
                     <label for="live-race-position">Position:</label>
                     <input type="number" id="live-race-position" class="form-control" required min="1">
                 </div>
                 <div class="form-group">
-                    <label for="live-race-gap">Time Behind:</label>
-                    <input type="text" id="live-race-gap" class="form-control" placeholder="e.g. +1.234s or LEADER">
+                    <label for="live-race-time-behind">Time Behind:</label>
+                    <input type="text" id="live-race-time-behind" class="form-control" required placeholder="e.g. +1.234 or LEADER or +1 LAP">
                 </div>
                 <div class="form-group">
-                    <label for="live-race-lap">Current Lap:</label>
-                    <input type="number" id="live-race-lap" class="form-control" min="1">
+                    <label for="live-race-current-lap">Current Lap:</label>
+                    <input type="number" id="live-race-current-lap" class="form-control" required min="0">
                 </div>
                 <div class="form-group">
-                    <label for="live-race-dnf">DNF:</label>
-                    <select id="live-race-dnf" class="form-control">
+                    <label for="live-race-is-dnf">DNF:</label>
+                    <select id="live-race-is-dnf" class="form-control" required>
                         <option value="0">No</option>
                         <option value="1">Yes</option>
                     </select>
                 </div>
                 <div class="form-buttons">
-                    <button type="button" class="btn" id="live-race-cancel-btn">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="live-race-submit-btn">Save</button>
+                    <button type="button" class="btn" id="live-race-entry-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="live-race-entry-submit-btn">Save</button>
                 </div>
             </form>
         </div>
