@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Edit race
     function editRace(id) {
-        fetch(`https://f1-race-api.onrender.com/api/races/${id}`)
+        fetch(`/api/races/${id}`)
             .then(response => response.json())
             .then(race => {
                 document.getElementById('race-form-title').textContent = 'Edit Race';
@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         // API endpoint and method
-        const url = isEdit ? `https://f1-race-api.onrender.com/api/races/${id}` : 'https://f1-race-api.onrender.com/api/races';
+        const url = isEdit ? `/api/races/${id}` : '/api/races';
         const method = isEdit ? 'PUT' : 'POST';
         
         // Send request
@@ -1250,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         // API endpoint and method
-        const url = isEdit ? `https://f1-race-api.onrender.com/api/live-race/${id}` : 'https://f1-race-api.onrender.com/api/live-race';
+        const url = isEdit ? `/api/live-race/${id}` : '/api/live-race';
         const method = isEdit ? 'PUT' : 'POST';
         
         // Send request
@@ -1695,7 +1695,7 @@ let driversData = [];
 
 // Fetch drivers data and populate dropdowns
 function fetchDriversForDropdowns() {
-    fetch('https://f1-race-api.onrender.com/api/driver-standings')
+    fetch('/api/driver-standings')
         .then(response => response.json())
         .then(drivers => {
             driversData = drivers;
