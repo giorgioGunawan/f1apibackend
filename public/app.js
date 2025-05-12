@@ -2837,57 +2837,66 @@ function initializeConstructorWidgets() {
     fetch('/api/constructor-standings')
         .then(response => response.json())
         .then(constructors => {
-            const selector = document.getElementById('constructor-widget-selector');
-            
-            // Clear existing options except the first one
-            while (selector.options.length > 1) {
-                selector.remove(1);
-            }
-            
-            // Sort constructors by points
+            // Sort constructors by points first
             constructors.sort((a, b) => b.points - a.points);
             
-            // Add constructors to selector
-            constructors.forEach((constructor, index) => {
+            // Add position to each constructor based on sorted order
+            constructors = constructors.map((constructor, index) => ({
+                ...constructor,
+                position: index + 1
+            }));
+
+            const selector = document.getElementById('constructor-widget-selector');
+            selector.innerHTML = '<option value="">Select Constructor</option>';
+            
+            constructors.forEach(constructor => {
                 const option = document.createElement('option');
-                option.value = JSON.stringify(constructor);
-                option.textContent = `${index + 1}. ${constructor.constructor_name}`;
+                option.value = constructor.id;
+                option.textContent = `${constructor.position}. ${constructor.constructor_name}`;
                 selector.appendChild(option);
             });
-            
-            // Add change event listener
+
+            // Add event listener for constructor selection
             selector.addEventListener('change', function() {
-                if (this.value) {
-                    const constructor = JSON.parse(this.value);
-                    updateAllConstructorWidgets(constructor, index + 1);
+                const selectedConstructor = constructors.find(c => c.id === parseInt(this.value));
+                if (selectedConstructor) {
+                    updateConstructorWidgets(selectedConstructor);
+                    // Keep the selected text in the selector
+                    this.options[this.selectedIndex].text = `${selectedConstructor.position}. ${selectedConstructor.constructor_name}`;
                 } else {
-                    updateAllConstructorWidgets(null);
+                    // Clear widgets if no constructor selected
+                    ['small', 'medium', 'large', 'lockscreen-rect', 'lockscreen-circular'].forEach(size => {
+                        const widgetContent = document.getElementById(`constructor-${size}`);
+                        if (widgetContent) {
+                            widgetContent.innerHTML = '<div class="widget-loading">Select a constructor...</div>';
+                        }
+                    });
                 }
             });
         })
         .catch(error => {
             console.error('Error loading constructors:', error);
-            showAlert('Error loading constructor data', 'danger');
         });
 }
 
-function updateAllConstructorWidgets(constructor, position) {
+function updateConstructorWidgets(constructor) {
+    console.log('Updating widgets with constructor:', constructor);
+    
     const sizes = ['small', 'medium', 'large', 'lockscreen-rect', 'lockscreen-circular'];
     
     sizes.forEach(size => {
         const widgetContent = document.getElementById(`constructor-${size}`);
         if (!widgetContent) return;
         
-        if (!constructor) {
-            widgetContent.innerHTML = '<div class="widget-loading">Select a constructor...</div>';
-            return;
-        }
-        
         switch(size) {
             case 'small':
                 widgetContent.innerHTML = `
                     <div class="constructor-name">${constructor.constructor_name}</div>
-                    <div class="constructor-position">P${position}</div>
+                    <div class="constructor-drivers">
+                        <div class="driver">${constructor.driver_name_1 || 'TBA'}</div>
+                        <div class="driver">${constructor.driver_name_2 || 'TBA'}</div>
+                    </div>
+                    <div class="constructor-position">P${constructor.position} - ${constructor.points} PTS</div>
                 `;
                 break;
                 
@@ -2897,7 +2906,7 @@ function updateAllConstructorWidgets(constructor, position) {
                         <div class="constructor-name">${constructor.constructor_name}</div>
                         <div class="constructor-stats">
                             <div class="stat">
-                                <div class="stat-value">P${position}</div>
+                                <div class="stat-value">P${constructor.position}</div>
                                 <div class="stat-label">Position</div>
                             </div>
                             <div class="stat">
@@ -2905,6 +2914,10 @@ function updateAllConstructorWidgets(constructor, position) {
                                 <div class="stat-label">Points</div>
                             </div>
                         </div>
+                    </div>
+                    <div class="constructor-drivers">
+                        <div class="driver">${constructor.driver_name_1 || 'TBA'}</div>
+                        <div class="driver">${constructor.driver_name_2 || 'TBA'}</div>
                     </div>
                 `;
                 break;
@@ -2915,7 +2928,7 @@ function updateAllConstructorWidgets(constructor, position) {
                         <div class="constructor-name">${constructor.constructor_name}</div>
                         <div class="constructor-stats">
                             <div class="stat">
-                                <div class="stat-value">P${position}</div>
+                                <div class="stat-value">P${constructor.position}</div>
                                 <div class="stat-label">Position</div>
                             </div>
                             <div class="stat">
@@ -2934,17 +2947,20 @@ function updateAllConstructorWidgets(constructor, position) {
                 
             case 'lockscreen-rect':
                 widgetContent.innerHTML = `
-                    <div class="constructor-lockscreen">
-                        <div class="constructor-name">${constructor.constructor_name}</div>
-                        <div class="constructor-position">P${position} - ${constructor.points} PTS</div>
+                    <div class="constructor-name">${constructor.constructor_name}</div>
+                    <div class="constructor-drivers">
+                        <div class="driver">${constructor.driver_name_1 || 'TBA'}</div>
+                        <div class="driver">${constructor.driver_name_2 || 'TBA'}</div>
                     </div>
+                    <div class="constructor-position">P${constructor.position} - ${constructor.points} PTS</div>
                 `;
                 break;
                 
             case 'lockscreen-circular':
                 widgetContent.innerHTML = `
-                    <div class="constructor-position">P${position}</div>
-                    <div class="constructor-points">${constructor.points}</div>
+                    <div class="constructor-name">${constructor.constructor_name}</div>
+                    <div class="constructor-position">P${constructor.position}</div>
+                    <div class="constructor-points">${constructor.points} PTS</div>
                 `;
                 break;
         }
