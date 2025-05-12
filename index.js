@@ -761,6 +761,16 @@ app.put('/api/races/:id/podium', (req, res) => {
     });
 });
 
+// Delete all races
+app.delete('/api/races', (req, res) => {
+  db.run('DELETE FROM races', function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ message: 'All races deleted successfully' });
+  });
+});
+
 // Serve static files from the 'public' directory
 app.use(express.static('public'));
 
