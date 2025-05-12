@@ -2701,69 +2701,76 @@ function populateExistingResults(results, session) {
 
 // Initialize driver widgets
 function initializeDriverWidgets() {
-    // First, populate the driver selector
     fetch('/api/driver-standings')
         .then(response => response.json())
         .then(drivers => {
-            const selector = document.getElementById('driver-widget-selector');
-            
-            // Clear existing options except the first one
-            while (selector.options.length > 1) {
-                selector.remove(1);
-            }
-            
-            // Sort drivers by points
+            // Sort drivers by points first
             drivers.sort((a, b) => b.points - a.points);
             
-            // Add drivers to selector
-            drivers.forEach((driver, index) => {
+            // Add position to each driver based on sorted order
+            drivers = drivers.map((driver, index) => ({
+                ...driver,
+                position: index + 1
+            }));
+
+            const selector = document.getElementById('driver-widget-selector');
+            selector.innerHTML = '<option value="">Select Driver</option>';
+            
+            drivers.forEach(driver => {
                 const option = document.createElement('option');
-                option.value = JSON.stringify(driver);
-                option.textContent = `${index + 1}. ${driver.driver_name}`;
+                option.value = driver.id;
+                // Use team_name instead of team
+                option.textContent = `${driver.position}. ${driver.driver_name} (${driver.team_name})`;
                 selector.appendChild(option);
             });
-            
-            // Add change event listener
+
+            // Add event listener for driver selection
             selector.addEventListener('change', function() {
-                if (this.value) {
-                    const driver = JSON.parse(this.value);
-                    updateAllDriverWidgets(driver, index + 1);
+                const selectedDriver = drivers.find(d => d.id === parseInt(this.value));
+                if (selectedDriver) {
+                    updateDriverWidgets(selectedDriver);
+                    // Keep the selected text in the selector
+                    this.options[this.selectedIndex].text = `${selectedDriver.position}. ${selectedDriver.driver_name} (${selectedDriver.team_name})`;
                 } else {
-                    updateAllDriverWidgets(null);
+                    // Clear widgets if no driver selected
+                    ['small', 'medium', 'large', 'lockscreen-rect', 'lockscreen-circular'].forEach(size => {
+                        const widgetContent = document.getElementById(`driver-${size}`);
+                        if (widgetContent) {
+                            widgetContent.innerHTML = '<div class="widget-loading">Select a driver...</div>';
+                        }
+                    });
                 }
             });
         })
         .catch(error => {
             console.error('Error loading drivers:', error);
-            showAlert('Error loading driver data', 'danger');
         });
 }
 
-function updateAllDriverWidgets(driver, position) {
+// Function to update driver widgets
+function updateDriverWidgets(driver) {
+    console.log('Updating widgets with driver:', driver);
+    
     const sizes = ['small', 'medium', 'large', 'lockscreen-rect', 'lockscreen-circular'];
     
     sizes.forEach(size => {
         const widgetContent = document.getElementById(`driver-${size}`);
         if (!widgetContent) return;
         
-        if (!driver) {
-            widgetContent.innerHTML = '<div class="widget-loading">Select a driver...</div>';
-            return;
-        }
-        
         switch(size) {
             case 'small':
                 widgetContent.innerHTML = `
-                    <div class="driver-number">${driver.driver_number || '??'}</div>
-                    <div class="driver-name">${driver.display_name || driver.driver_name}</div>
-                    <div class="driver-position">P${position}</div>
+                    <div class="driver-number">${driver.driver_number || ''}</div>
+                    <div class="driver-name">${driver.driver_name}</div>
+                    <div class="driver-team">${driver.team_name}</div>
+                    <div class="driver-position">P${driver.position} - ${driver.points} PTS</div>
                 `;
                 break;
                 
             case 'medium':
                 widgetContent.innerHTML = `
                     <div class="driver-header">
-                        <div class="driver-number">${driver.driver_number || '??'}</div>
+                        <div class="driver-number">${driver.driver_number || ''}</div>
                         <div class="driver-info">
                             <div class="driver-name">${driver.driver_name}</div>
                             <div class="driver-team">${driver.team_name}</div>
@@ -2771,7 +2778,7 @@ function updateAllDriverWidgets(driver, position) {
                     </div>
                     <div class="driver-stats">
                         <div class="stat">
-                            <div class="stat-value">P${position}</div>
+                            <div class="stat-value">P${driver.position}</div>
                             <div class="stat-label">Position</div>
                         </div>
                         <div class="stat">
@@ -2785,16 +2792,15 @@ function updateAllDriverWidgets(driver, position) {
             case 'large':
                 widgetContent.innerHTML = `
                     <div class="driver-header">
-                        <div class="driver-number">${driver.driver_number || '??'}</div>
+                        <div class="driver-number">${driver.driver_number || ''}</div>
                         <div class="driver-info">
                             <div class="driver-name">${driver.driver_name}</div>
-                            <div class="driver-display-name">${driver.display_name || ''}</div>
                             <div class="driver-team">${driver.team_name}</div>
                         </div>
                     </div>
                     <div class="driver-stats">
                         <div class="stat">
-                            <div class="stat-value">P${position}</div>
+                            <div class="stat-value">P${driver.position}</div>
                             <div class="stat-label">Position</div>
                         </div>
                         <div class="stat">
@@ -2807,17 +2813,19 @@ function updateAllDriverWidgets(driver, position) {
                 
             case 'lockscreen-rect':
                 widgetContent.innerHTML = `
-                    <div class="driver-lockscreen">
-                        <div class="driver-name">${driver.display_name || driver.driver_name}</div>
-                        <div class="driver-position">P${position} - ${driver.points} PTS</div>
-                    </div>
+                    <div class="driver-number">${driver.driver_number || ''}</div>
+                    <div class="driver-name">${driver.driver_name}</div>
+                    <div class="driver-team">${driver.team_name}</div>
+                    <div class="driver-position">P${driver.position} - ${driver.points} PTS</div>
                 `;
                 break;
                 
             case 'lockscreen-circular':
                 widgetContent.innerHTML = `
-                    <div class="driver-number">${driver.driver_number || '??'}</div>
-                    <div class="driver-position">P${position}</div>
+                    <div class="driver-number">${driver.driver_number || ''}</div>
+                    <div class="driver-name">${driver.driver_name}</div>
+                    <div class="driver-position">P${driver.position}</div>
+                    <div class="driver-points">${driver.points} PTS</div>
                 `;
                 break;
         }
