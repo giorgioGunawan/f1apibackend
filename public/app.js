@@ -1889,103 +1889,262 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Widget functionality
 function initializeWidgets() {
-    // Initialize racing widget
-    initializeRacingWidget();
-    
-    // Initialize driver widget selector
-    initializeDriverSelector();
+    initializeNextRaceWidgets();
+    initializeDriverWidgets();
+    initializeConstructorWidgets();
 }
 
-// Initialize racing widget with next race data
-function initializeRacingWidget() {
-    const widgetContent = document.getElementById('racing-widget-content');
-    widgetContent.innerHTML = '<div class="widget-loading">Loading race data...</div>';
-    
-    // Fetch races data from the correct API endpoint
-    fetch('api/races')
-        .then(response => response.json())
+// Initialize next race widgets with different sizes
+function initializeNextRaceWidgets() {
+    console.log('Initializing next race widgets...');
+    fetch('/api/races')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(races => {
-            // Find the next upcoming race
-            const now = Math.floor(Date.now() / 1000); // Current time in seconds
-            const upcomingRaces = races.filter(race => race.datetime_race > now);
-            
-            if (upcomingRaces.length === 0) {
-                widgetContent.innerHTML = '<div class="widget-loading">No upcoming races found</div>';
+            console.log('Fetched races:', races);
+            if (!Array.isArray(races) || races.length === 0) {
+                console.log('No races found in response');
+                updateAllNextRaceWidgets({ error: 'No races found' });
                 return;
             }
             
-            // Sort by date and get the next race
-            upcomingRaces.sort((a, b) => a.datetime_race - b.datetime_race);
-            const nextRace = upcomingRaces[0];
-            
-            // Format dates
-            const startDate = new Date(nextRace.datetime_fp1 * 1000);
-            const endDate = new Date(nextRace.datetime_race * 1000);
-            
-            const formatDate = (date) => {
-                return date.getDate() + ' ' + date.toLocaleString('default', { month: 'short' });
-            };
-            
-            const dateRange = formatDate(startDate) + ' - ' + formatDate(endDate);
-            
-            // Calculate countdown
-            const countdown = calculateCountdown(nextRace.datetime_race);
-            
-            // Update widget content
-            widgetContent.innerHTML = `
-                <div class="race-round">Round ${nextRace.round}</div>
-                <div class="race-name">${nextRace.name}</div>
-                <div class="race-location">${nextRace.location}</div>
-                <div class="race-dates">${dateRange}</div>
-                <div class="race-countdown">Race starts in ${countdown}</div>
-            `;
-            
-            // Update countdown every second
-            const countdownInterval = setInterval(() => {
-                const updatedCountdown = calculateCountdown(nextRace.datetime_race);
-                const countdownElement = widgetContent.querySelector('.race-countdown');
-                if (countdownElement) {
-                    countdownElement.textContent = `Race starts in ${updatedCountdown}`;
-                } else {
-                    clearInterval(countdownInterval);
-                }
-            }, 1000);
-            
-            // Clear interval when switching tabs
-            document.querySelectorAll('.sidebar-menu li').forEach(item => {
-                item.addEventListener('click', function() {
-                    if (this.getAttribute('data-section') !== 'widgets') {
-                        clearInterval(countdownInterval);
-                    }
-                });
+            const now = Math.floor(Date.now() / 1000);
+            const upcomingRaces = races.filter(race => {
+                const raceTime = typeof race.datetime_race === 'string' 
+                    ? parseInt(race.datetime_race) 
+                    : race.datetime_race;
+                return raceTime > now;
             });
+            
+            console.log('Upcoming races:', upcomingRaces);
+            
+            if (upcomingRaces.length === 0) {
+                console.log('No upcoming races found');
+                updateAllNextRaceWidgets({ error: 'No upcoming races found' });
+                return;
+            }
+            
+            upcomingRaces.sort((a, b) => {
+                const timeA = typeof a.datetime_race === 'string' ? parseInt(a.datetime_race) : a.datetime_race;
+                const timeB = typeof b.datetime_race === 'string' ? parseInt(b.datetime_race) : b.datetime_race;
+                return timeA - timeB;
+            });
+            
+            const nextRace = upcomingRaces[0];
+            console.log('Next race:', nextRace);
+            
+            updateAllNextRaceWidgets(nextRace);
+            startNextRaceCountdown(nextRace);
         })
         .catch(error => {
             console.error('Error fetching race data:', error);
-            widgetContent.innerHTML = '<div class="widget-loading">Error loading race data</div>';
+            updateAllNextRaceWidgets({ error: 'Error loading race data' });
         });
+}
+
+// Helper function to safely parse timestamps
+function parseTimestamp(timestamp) {
+    if (!timestamp) return null;
+    return typeof timestamp === 'string' ? parseInt(timestamp) : timestamp;
+}
+
+// Update the getNextSession function to handle timestamp parsing
+function getNextSession(raceData) {
+    try {
+        const now = Math.floor(Date.now() / 1000);
+        const sessions = [
+            { name: 'FP1', time: parseTimestamp(raceData.datetime_fp1) },
+            { name: 'FP2', time: parseTimestamp(raceData.datetime_fp2) },
+            { name: 'FP3', time: parseTimestamp(raceData.datetime_fp3) },
+            { name: 'Sprint', time: parseTimestamp(raceData.datetime_sprint) },
+            { name: 'Qualifying', time: parseTimestamp(raceData.datetime_qualifying) },
+            { name: 'Race', time: parseTimestamp(raceData.datetime_race) }
+        ];
+        
+        const filteredSessions = sessions.filter(session => session.time && session.time > now);
+        
+        if (filteredSessions.length === 0) return { name: 'Race', countdown: 'Completed' };
+        
+        const nextSession = filteredSessions[0];
+        return {
+            name: nextSession.name,
+            time: nextSession.time,
+            countdown: calculateCountdown(nextSession.time)
+        };
+    } catch (error) {
+        console.error('Error in getNextSession:', error);
+        return { name: 'Error', countdown: 'Error processing session times' };
+    }
+}
+
+// Update the getUpcomingSessionsList function to handle timestamp parsing
+function getUpcomingSessionsList(raceData, limit = 3) {
+    const now = Math.floor(Date.now() / 1000);
+    const sessions = [
+        { name: 'FP1', time: parseTimestamp(raceData.datetime_fp1) },
+        { name: 'FP2', time: parseTimestamp(raceData.datetime_fp2) },
+        { name: 'FP3', time: parseTimestamp(raceData.datetime_fp3) },
+        { name: 'Sprint', time: parseTimestamp(raceData.datetime_sprint) },
+        { name: 'Qualifying', time: parseTimestamp(raceData.datetime_qualifying) },
+        { name: 'Race', time: parseTimestamp(raceData.datetime_race) }
+    ]
+    .filter(session => session.time && session.time > now)
+    .slice(0, limit);
+    
+    return sessions.map(session => `
+        <div class="session-time">
+            ${session.name}: ${formatDateTime(session.time)}
+        </div>
+    `).join('');
+}
+
+// Update the getAllSessionsList function to handle timestamp parsing
+function getAllSessionsList(raceData) {
+    const sessions = [
+        { name: 'Practice 1', time: parseTimestamp(raceData.datetime_fp1) },
+        { name: 'Practice 2', time: parseTimestamp(raceData.datetime_fp2) },
+        { name: 'Practice 3', time: parseTimestamp(raceData.datetime_fp3) },
+        { name: 'Sprint', time: parseTimestamp(raceData.datetime_sprint) },
+        { name: 'Qualifying', time: parseTimestamp(raceData.datetime_qualifying) },
+        { name: 'Race', time: parseTimestamp(raceData.datetime_race) }
+    ].filter(session => session.time);
+    
+    return sessions.map(session => `
+        <div class="session-time">
+            ${session.name}: ${formatDateTime(session.time)}
+        </div>
+    `).join('');
+}
+
+function updateAllNextRaceWidgets(raceData) {
+    console.log('Updating widgets with race data:', raceData);
+    
+    const sizes = ['small', 'medium', 'large', 'lockscreen-rect', 'lockscreen-circular'];
+    
+    // Get the date range
+    const dates = [
+        raceData.datetime_fp1,
+        raceData.datetime_fp2,
+        raceData.datetime_fp3,
+        raceData.datetime_sprint,
+        raceData.datetime_qualifying,
+        raceData.datetime_race
+    ].filter(date => date); // Filter out null/undefined dates
+    
+    const startDate = new Date(Math.min(...dates) * 1000);
+    const endDate = new Date(Math.max(...dates) * 1000);
+    
+    const formatDate = (date) => {
+        return date.toLocaleDateString(undefined, {
+            day: 'numeric',
+            month: 'short'
+        });
+    };
+    
+    const dateRange = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    
+    sizes.forEach(size => {
+        const widgetContent = document.getElementById(`next-race-${size}`);
+        if (!widgetContent) {
+            console.error(`Could not find widget content element for size: ${size}`);
+            return;
+        }
+        
+        if (raceData.error) {
+            console.log('Showing error:', raceData.error);
+            widgetContent.innerHTML = `<div class="widget-error">${raceData.error}</div>`;
+            return;
+        }
+        
+        const nextSession = getNextSession(raceData);
+        console.log('Next session info:', nextSession);
+        
+        switch(size) {
+            case 'small':
+                widgetContent.innerHTML = `
+                    <div class="race-round">Round ${raceData.round}</div>
+                    <div class="race-name">${raceData.location}</div>
+                    <div class="race-dates">${dateRange}</div>
+                    <div class="race-countdown">${nextSession.name} in ${nextSession.countdown}</div>
+                `;
+                break;
+                
+            case 'medium':
+                widgetContent.innerHTML = `
+                    <div class="race-round">Round ${raceData.round}</div>
+                    <div class="race-name">${raceData.name}</div>
+                    <div class="race-location">${raceData.location}</div>
+                    <div class="race-dates">${dateRange}</div>
+                    <div class="race-countdown">${nextSession.name} in ${nextSession.countdown}</div>
+                    <div class="next-sessions">
+                        ${getUpcomingSessionsList(raceData, 3)}
+                    </div>
+                `;
+                break;
+                
+            case 'large':
+                widgetContent.innerHTML = `
+                    <div class="race-round">Round ${raceData.round}</div>
+                    <div class="race-name">${raceData.name}</div>
+                    <div class="race-location">${raceData.location}</div>
+                    <div class="race-dates">${dateRange}</div>
+                    <div class="race-countdown">${nextSession.name} in ${nextSession.countdown}</div>
+                    <div class="all-sessions">
+                        ${getAllSessionsList(raceData)}
+                    </div>
+                `;
+                break;
+                
+            case 'lockscreen-rect':
+                widgetContent.innerHTML = `
+                    <div class="race-round">Round ${raceData.round}</div>
+                    <div class="race-name">${raceData.name}</div>
+                    <div class="race-location">${raceData.location}</div>
+                    <div class="race-dates">${dateRange}</div>
+                    <div class="race-countdown">${nextSession.name} in ${nextSession.countdown}</div>
+                `;
+                break;
+                
+            case 'lockscreen-circular':
+                widgetContent.innerHTML = `
+                    <div class="race-round">R${raceData.round}</div>
+                    <div class="race-name">${raceData.location}</div>
+                    <div class="race-countdown-circular">
+                        ${nextSession.name}<br>
+                        ${formatCircularCountdown(nextSession.time)}
+                    </div>
+                `;
+                break;
+        }
+    });
 }
 
 // Calculate countdown string from timestamp
 function calculateCountdown(timestamp) {
     const now = Math.floor(Date.now() / 1000);
-    const timeRemaining = timestamp - now;
+    const timeLeft = timestamp - now;
     
-    if (timeRemaining <= 0) {
-        return "Race has started!";
+    if (timeLeft <= 0) {
+        return 'Started';
     }
     
-    const days = Math.floor(timeRemaining / 86400);
-    const hours = Math.floor((timeRemaining % 86400) / 3600);
-    const minutes = Math.floor((timeRemaining % 3600) / 60);
-    const seconds = timeRemaining % 60;
+    const days = Math.floor(timeLeft / (24 * 60 * 60));
+    const hours = Math.floor((timeLeft % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((timeLeft % (60 * 60)) / 60);
+    const seconds = timeLeft % 60;
     
     if (days > 0) {
-        return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+        return `${days}d ${hours}h`;
     } else if (hours > 0) {
-        return `${hours}h ${minutes}m ${seconds}s`;
-    } else {
+        return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
         return `${minutes}m ${seconds}s`;
+    } else {
+        return `${seconds}s`;
     }
 }
 
@@ -2538,4 +2697,352 @@ function populateExistingResults(results, session) {
     
     // Reinitialize drag and drop
     initResultsDragAndDrop();
+}
+
+// Initialize driver widgets
+function initializeDriverWidgets() {
+    // First, populate the driver selector
+    fetch('/api/driver-standings')
+        .then(response => response.json())
+        .then(drivers => {
+            const selector = document.getElementById('driver-widget-selector');
+            
+            // Clear existing options except the first one
+            while (selector.options.length > 1) {
+                selector.remove(1);
+            }
+            
+            // Sort drivers by points
+            drivers.sort((a, b) => b.points - a.points);
+            
+            // Add drivers to selector
+            drivers.forEach((driver, index) => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify(driver);
+                option.textContent = `${index + 1}. ${driver.driver_name}`;
+                selector.appendChild(option);
+            });
+            
+            // Add change event listener
+            selector.addEventListener('change', function() {
+                if (this.value) {
+                    const driver = JSON.parse(this.value);
+                    updateAllDriverWidgets(driver, index + 1);
+                } else {
+                    updateAllDriverWidgets(null);
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error loading drivers:', error);
+            showAlert('Error loading driver data', 'danger');
+        });
+}
+
+function updateAllDriverWidgets(driver, position) {
+    const sizes = ['small', 'medium', 'large', 'lockscreen-rect', 'lockscreen-circular'];
+    
+    sizes.forEach(size => {
+        const widgetContent = document.getElementById(`driver-${size}`);
+        if (!widgetContent) return;
+        
+        if (!driver) {
+            widgetContent.innerHTML = '<div class="widget-loading">Select a driver...</div>';
+            return;
+        }
+        
+        switch(size) {
+            case 'small':
+                widgetContent.innerHTML = `
+                    <div class="driver-number">${driver.driver_number || '??'}</div>
+                    <div class="driver-name">${driver.display_name || driver.driver_name}</div>
+                    <div class="driver-position">P${position}</div>
+                `;
+                break;
+                
+            case 'medium':
+                widgetContent.innerHTML = `
+                    <div class="driver-header">
+                        <div class="driver-number">${driver.driver_number || '??'}</div>
+                        <div class="driver-info">
+                            <div class="driver-name">${driver.driver_name}</div>
+                            <div class="driver-team">${driver.team_name}</div>
+                        </div>
+                    </div>
+                    <div class="driver-stats">
+                        <div class="stat">
+                            <div class="stat-value">P${position}</div>
+                            <div class="stat-label">Position</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">${driver.points}</div>
+                            <div class="stat-label">Points</div>
+                        </div>
+                    </div>
+                `;
+                break;
+                
+            case 'large':
+                widgetContent.innerHTML = `
+                    <div class="driver-header">
+                        <div class="driver-number">${driver.driver_number || '??'}</div>
+                        <div class="driver-info">
+                            <div class="driver-name">${driver.driver_name}</div>
+                            <div class="driver-display-name">${driver.display_name || ''}</div>
+                            <div class="driver-team">${driver.team_name}</div>
+                        </div>
+                    </div>
+                    <div class="driver-stats">
+                        <div class="stat">
+                            <div class="stat-value">P${position}</div>
+                            <div class="stat-label">Position</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">${driver.points}</div>
+                            <div class="stat-label">Points</div>
+                        </div>
+                    </div>
+                `;
+                break;
+                
+            case 'lockscreen-rect':
+                widgetContent.innerHTML = `
+                    <div class="driver-lockscreen">
+                        <div class="driver-name">${driver.display_name || driver.driver_name}</div>
+                        <div class="driver-position">P${position} - ${driver.points} PTS</div>
+                    </div>
+                `;
+                break;
+                
+            case 'lockscreen-circular':
+                widgetContent.innerHTML = `
+                    <div class="driver-number">${driver.driver_number || '??'}</div>
+                    <div class="driver-position">P${position}</div>
+                `;
+                break;
+        }
+    });
+}
+
+// Initialize constructor widgets
+function initializeConstructorWidgets() {
+    fetch('/api/constructor-standings')
+        .then(response => response.json())
+        .then(constructors => {
+            const selector = document.getElementById('constructor-widget-selector');
+            
+            // Clear existing options except the first one
+            while (selector.options.length > 1) {
+                selector.remove(1);
+            }
+            
+            // Sort constructors by points
+            constructors.sort((a, b) => b.points - a.points);
+            
+            // Add constructors to selector
+            constructors.forEach((constructor, index) => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify(constructor);
+                option.textContent = `${index + 1}. ${constructor.constructor_name}`;
+                selector.appendChild(option);
+            });
+            
+            // Add change event listener
+            selector.addEventListener('change', function() {
+                if (this.value) {
+                    const constructor = JSON.parse(this.value);
+                    updateAllConstructorWidgets(constructor, index + 1);
+                } else {
+                    updateAllConstructorWidgets(null);
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error loading constructors:', error);
+            showAlert('Error loading constructor data', 'danger');
+        });
+}
+
+function updateAllConstructorWidgets(constructor, position) {
+    const sizes = ['small', 'medium', 'large', 'lockscreen-rect', 'lockscreen-circular'];
+    
+    sizes.forEach(size => {
+        const widgetContent = document.getElementById(`constructor-${size}`);
+        if (!widgetContent) return;
+        
+        if (!constructor) {
+            widgetContent.innerHTML = '<div class="widget-loading">Select a constructor...</div>';
+            return;
+        }
+        
+        switch(size) {
+            case 'small':
+                widgetContent.innerHTML = `
+                    <div class="constructor-name">${constructor.constructor_name}</div>
+                    <div class="constructor-position">P${position}</div>
+                `;
+                break;
+                
+            case 'medium':
+                widgetContent.innerHTML = `
+                    <div class="constructor-header">
+                        <div class="constructor-name">${constructor.constructor_name}</div>
+                        <div class="constructor-stats">
+                            <div class="stat">
+                                <div class="stat-value">P${position}</div>
+                                <div class="stat-label">Position</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${constructor.points}</div>
+                                <div class="stat-label">Points</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                break;
+                
+            case 'large':
+                widgetContent.innerHTML = `
+                    <div class="constructor-header">
+                        <div class="constructor-name">${constructor.constructor_name}</div>
+                        <div class="constructor-stats">
+                            <div class="stat">
+                                <div class="stat-value">P${position}</div>
+                                <div class="stat-label">Position</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${constructor.points}</div>
+                                <div class="stat-label">Points</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="constructor-drivers">
+                        <div class="driver">${constructor.driver_name_1 || 'TBA'}</div>
+                        <div class="driver">${constructor.driver_name_2 || 'TBA'}</div>
+                        ${constructor.driver_name_3 ? `<div class="driver">${constructor.driver_name_3}</div>` : ''}
+                    </div>
+                `;
+                break;
+                
+            case 'lockscreen-rect':
+                widgetContent.innerHTML = `
+                    <div class="constructor-lockscreen">
+                        <div class="constructor-name">${constructor.constructor_name}</div>
+                        <div class="constructor-position">P${position} - ${constructor.points} PTS</div>
+                    </div>
+                `;
+                break;
+                
+            case 'lockscreen-circular':
+                widgetContent.innerHTML = `
+                    <div class="constructor-position">P${position}</div>
+                    <div class="constructor-points">${constructor.points}</div>
+                `;
+                break;
+        }
+    });
+}
+
+// Add countdown timer functionality
+function startNextRaceCountdown(raceData) {
+    // Clear any existing countdown interval
+    if (window.countdownInterval) {
+        clearInterval(window.countdownInterval);
+    }
+    
+    // Update countdown every second
+    window.countdownInterval = setInterval(() => {
+        // Only update the countdown text, not the entire widget
+        const nextSession = getNextSession(raceData);
+        
+        // Update each widget size's countdown
+        const sizes = ['small', 'medium', 'large', 'lockscreen-rect', 'lockscreen-circular'];
+        sizes.forEach(size => {
+            const widgetContent = document.getElementById(`next-race-${size}`);
+            if (!widgetContent) return;
+
+            if (size === 'lockscreen-circular') {
+                const countdownElement = widgetContent.querySelector('.race-countdown-circular');
+                if (countdownElement) {
+                    countdownElement.innerHTML = `
+                        ${nextSession.name}<br>
+                        ${formatCircularCountdown(nextSession.time)}
+                    `;
+                }
+            } else {
+                const countdownElement = widgetContent.querySelector('.race-countdown');
+                if (countdownElement) {
+                    countdownElement.textContent = `${nextSession.name} in ${nextSession.countdown}`;
+                }
+            }
+        });
+    }, 1000);
+    
+    // Clear interval when switching away from widgets section
+    document.querySelectorAll('.sidebar-menu li').forEach(item => {
+        item.addEventListener('click', function() {
+            if (this.getAttribute('data-section') !== 'widgets') {
+                clearInterval(window.countdownInterval);
+            }
+        });
+    });
+}
+
+// Add this function near the other helper functions
+function calculateCountdown(timestamp) {
+    const now = Math.floor(Date.now() / 1000);
+    const timeLeft = timestamp - now;
+    
+    if (timeLeft <= 0) {
+        return 'Started';
+    }
+    
+    const days = Math.floor(timeLeft / (24 * 60 * 60));
+    const hours = Math.floor((timeLeft % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((timeLeft % (60 * 60)) / 60);
+    const seconds = timeLeft % 60;
+    
+    if (days > 0) {
+        return `${days}d ${hours}h`;
+    } else if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+    } else {
+        return `${seconds}s`;
+    }
+}
+
+// Also add this helper function for formatting dates
+function formatDateTime(timestamp) {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Add this new helper function for circular countdown format
+function formatCircularCountdown(timestamp) {
+    const now = Math.floor(Date.now() / 1000);
+    const timeLeft = timestamp - now;
+    
+    if (timeLeft <= 0) {
+        return 'Started';
+    }
+    
+    const days = Math.floor(timeLeft / (24 * 60 * 60));
+    const hours = Math.floor((timeLeft % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((timeLeft % (60 * 60)) / 60);
+    
+    if (days > 0) {
+        return `${days} days`;
+    } else if (hours > 0) {
+        return `${hours} hrs`;
+    } else {
+        return `${minutes} min`;
+    }
 } 

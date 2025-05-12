@@ -39,8 +39,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
   db.get("PRAGMA table_info(driver_standings)", (err, rows) => {
     if (err) {
       console.error('Error checking driver_standings table schema:', err);
-    } else {
-      console.log('driver_standings table schema:', rows);
     }
   });
 });
@@ -459,17 +457,13 @@ app.post('/api/driver-standings', (req, res) => {
 });
 
 // Update a driver standing
-app.put('/api/driver-standings/:id', (req, res) => {
-  console.log('PUT driver-standings request body:', req.body); // Debug log
-  
+app.put('/api/driver-standings/:id', (req, res) => {  
   const { driver_name, team_name, points, driver_number, display_name } = req.body;
   
   if (!driver_name || !team_name || points === undefined) {
     return res.status(400).json({ error: 'Please provide driver_name, team_name, and points' });
   }
-  
-  console.log('Processing display_name for update:', display_name); // Debug log
-  
+    
   // First, let's check the current record in the database
   db.get('SELECT * FROM driver_standings WHERE id = ?', [req.params.id], (err, row) => {
     if (err) {
@@ -477,7 +471,6 @@ app.put('/api/driver-standings/:id', (req, res) => {
       return res.status(500).json({ error: err.message });
     }
     
-    console.log('Current record in database:', row);
     
     // Now perform the update
     const updateQuery = `UPDATE driver_standings SET 
@@ -497,19 +490,15 @@ app.put('/api/driver-standings/:id', (req, res) => {
       req.params.id
     ];
     
-    console.log('Update query:', updateQuery);
-    console.log('Update params:', params);
-    
+
     db.run(updateQuery, params, function(err) {
       if (err) {
         console.error('Database error during update:', err); // Debug log
         return res.status(500).json({ error: err.message });
       }
       
-      console.log('Update result - changes:', this.changes);
-      
       if (this.changes === 0) {
-        return res.status(404).json({ error: 'Driver standing not found' });
+        return res.status(404).json({ error: 'Driver standing not found' });  
       }
       
       // After update, fetch the record again to confirm changes
@@ -517,10 +506,7 @@ app.put('/api/driver-standings/:id', (req, res) => {
         if (err) {
           console.error('Error fetching updated record:', err);
           // Still return success response even if this verification query fails
-        } else {
-          console.log('Updated record in database:', updatedRow);
         }
-        
         // Create the response object with the exact values that were sent
         const updatedRecord = {
           id: parseInt(req.params.id),
@@ -531,7 +517,6 @@ app.put('/api/driver-standings/:id', (req, res) => {
           display_name: display_name  // Use the exact value that was sent
         };
         
-        console.log('Sending response:', updatedRecord); // Debug log
         res.json(updatedRecord);
       });
     });
