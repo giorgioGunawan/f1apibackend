@@ -34,6 +34,15 @@ const db = new sqlite3.Database(dbPath, (err) => {
     process.exit(1);
   }
   console.log('Connected to the F1 races database');
+
+  // Add this near the beginning after database connection is established
+  db.get("PRAGMA table_info(driver_standings)", (err, rows) => {
+    if (err) {
+      console.error('Error checking driver_standings table schema:', err);
+    } else {
+      console.log('driver_standings table schema:', rows);
+    }
+  });
 });
 
 // Routes
@@ -451,30 +460,82 @@ app.post('/api/driver-standings', (req, res) => {
 
 // Update a driver standing
 app.put('/api/driver-standings/:id', (req, res) => {
+  console.log('PUT driver-standings request body:', req.body); // Debug log
+  
   const { driver_name, team_name, points, driver_number, display_name } = req.body;
   
   if (!driver_name || !team_name || points === undefined) {
     return res.status(400).json({ error: 'Please provide driver_name, team_name, and points' });
   }
   
-  db.run(`UPDATE driver_standings SET driver_name = ?, team_name = ?, points = ?, driver_number = ?, display_name = ? WHERE id = ?`,
-    [driver_name, team_name, points, driver_number || null, display_name || null, req.params.id],
-    function(err) {
+  console.log('Processing display_name for update:', display_name); // Debug log
+  
+  // First, let's check the current record in the database
+  db.get('SELECT * FROM driver_standings WHERE id = ?', [req.params.id], (err, row) => {
+    if (err) {
+      console.error('Error fetching current record:', err);
+      return res.status(500).json({ error: err.message });
+    }
+    
+    console.log('Current record in database:', row);
+    
+    // Now perform the update
+    const updateQuery = `UPDATE driver_standings SET 
+                          driver_name = ?, 
+                          team_name = ?, 
+                          points = ?, 
+                          driver_number = ?, 
+                          display_name = ? 
+                        WHERE id = ?`;
+    
+    const params = [
+      driver_name, 
+      team_name, 
+      points, 
+      driver_number || null, 
+      display_name, // Don't convert empty string to null
+      req.params.id
+    ];
+    
+    console.log('Update query:', updateQuery);
+    console.log('Update params:', params);
+    
+    db.run(updateQuery, params, function(err) {
       if (err) {
+        console.error('Database error during update:', err); // Debug log
         return res.status(500).json({ error: err.message });
       }
+      
+      console.log('Update result - changes:', this.changes);
+      
       if (this.changes === 0) {
         return res.status(404).json({ error: 'Driver standing not found' });
       }
-      res.json({
-        id: parseInt(req.params.id),
-        driver_name,
-        team_name,
-        points,
-        driver_number,
-        display_name
+      
+      // After update, fetch the record again to confirm changes
+      db.get('SELECT * FROM driver_standings WHERE id = ?', [req.params.id], (err, updatedRow) => {
+        if (err) {
+          console.error('Error fetching updated record:', err);
+          // Still return success response even if this verification query fails
+        } else {
+          console.log('Updated record in database:', updatedRow);
+        }
+        
+        // Create the response object with the exact values that were sent
+        const updatedRecord = {
+          id: parseInt(req.params.id),
+          driver_name,
+          team_name,
+          points,
+          driver_number: driver_number || null,
+          display_name: display_name  // Use the exact value that was sent
+        };
+        
+        console.log('Sending response:', updatedRecord); // Debug log
+        res.json(updatedRecord);
       });
     });
+  });
 });
 
 // Delete a driver standing

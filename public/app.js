@@ -1206,7 +1206,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ===== DRIVER STANDINGS =====
-    const driverStandingsTable = document.getElementById('driver-standings-table').querySelector('tbody');
+    const driverStandingsTable = document.getElementById('driver-standings-table-body').querySelector('tbody');
     const driverStandingForm = document.getElementById('driver-standing-form');
 
     // Simplified render driver standings table function
@@ -1312,18 +1312,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function editDriverStanding(standingId) {
-        fetch('/api/driver-standings/' + standingId)
+    // Function to edit a driver standing
+    function editDriverStanding(id) {
+        fetch(`/api/driver-standings/${id}`)
             .then(response => response.json())
-            .then(standing => {
-                populateDriverStandingForm(standing);
+            .then(data => {
+                console.log('Editing driver standing data:', data); // Debug log
+                
+                document.getElementById('driver-standing-id').value = data.id;
+                document.getElementById('driver-standing-name').value = data.driver_name;
+                document.getElementById('driver-standing-display-name').value = data.display_name || '';
+                document.getElementById('driver-standing-team').value = data.team_name;
+                document.getElementById('driver-standing-number').value = data.driver_number || '';
+                document.getElementById('driver-standing-points').value = data.points;
+                
                 document.getElementById('driver-standing-form-title').textContent = 'Edit Driver Standing';
                 document.getElementById('driver-standing-submit-btn').textContent = 'Update Standing';
+                
                 openModal('driver-standing-modal');
             })
             .catch(error => {
-                console.error('Error loading driver standing:', error);
-                showAlert('Error loading driver standing details', 'danger');
+                console.error('Error:', error);
+                showAlert('Error loading driver standing: ' + error.message, 'danger');
             });
     }
 
@@ -1357,16 +1367,26 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         const id = document.getElementById('driver-standing-id').value;
+        const driverName = document.getElementById('driver-standing-name').value;
+        const displayName = document.getElementById('driver-standing-display-name').value;
+        const teamName = document.getElementById('driver-standing-team').value;
+        const driverNumber = document.getElementById('driver-standing-number').value;
+        const points = document.getElementById('driver-standing-points').value;
+        
+        console.log('Submitting driver standing with display name:', displayName); // Debug log
+        
         const data = {
-            driver_name: document.getElementById('driver-standing-name').value,
-            team_name: document.getElementById('driver-standing-team').value,
-            points: parseFloat(document.getElementById('driver-standing-points').value),
-            driver_number: document.getElementById('driver-standing-number').value || null,
-            display_name: document.getElementById('driver-standing-display-name').value || null
+            driver_name: driverName,
+            display_name: displayName, // Don't convert empty string to null
+            team_name: teamName,
+            driver_number: driverNumber || null,
+            points: points
         };
         
         const method = id ? 'PUT' : 'POST';
-        const url = id ? '/api/driver-standings/' + id : '/api/driver-standings';
+        const url = id ? `/api/driver-standings/${id}` : '/api/driver-standings';
+        
+        console.log('Sending data:', data); // Debug log
         
         fetch(url, {
             method: method,
@@ -1382,12 +1402,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
+            console.log('Response data:', data); // Debug log
             closeModal('driver-standing-modal');
             loadDriverStandings();
+            showAlert(id ? 'Driver standing updated successfully' : 'Driver standing added successfully');
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('There was a problem saving the driver standing');
+            showAlert('Error saving driver standing: ' + error.message, 'danger');
         });
     });
 
@@ -1779,7 +1801,91 @@ document.addEventListener('DOMContentLoaded', function() {
     if (timezoneDisplay) {
         timezoneDisplay.textContent = timezone;
     }
+
+    // When the document is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // ... existing code ...
+        
+        // Add event listener for the driver standings button with console logging
+        const addDriverStandingBtn = document.getElementById('addDriverStandingBtn');
+        console.log('Driver standing button found:', addDriverStandingBtn); // Debug log
+        
+        if (addDriverStandingBtn) {
+            addDriverStandingBtn.addEventListener('click', function() {
+                console.log('Driver standing button clicked!'); // Debug log
+                // Reset the form
+                document.getElementById('driver-standing-form').reset();
+                // Clear the ID field
+                document.getElementById('driver-standing-id').value = '';
+                // Set the form title
+                document.getElementById('driver-standing-form-title').textContent = 'Add Driver Standing';
+                // Set the submit button text
+                document.getElementById('driver-standing-submit-btn').textContent = 'Add Standing';
+                // Open the modal
+                openModal('driver-standing-modal');
+            });
+        } else {
+            console.error('Could not find addDriverStandingBtn element');
+        }
+        
+        // Add event listener for the driver standing form submission
+        const driverStandingForm = document.getElementById('driver-standing-form');
+        if (driverStandingForm) {
+            driverStandingForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const id = document.getElementById('driver-standing-id').value;
+                const driverName = document.getElementById('driver-standing-name').value;
+                const displayName = document.getElementById('driver-standing-display-name').value;
+                const teamName = document.getElementById('driver-standing-team').value;
+                const driverNumber = document.getElementById('driver-standing-number').value;
+                const points = document.getElementById('driver-standing-points').value;
+                
+                const data = {
+                    driver_name: driverName,
+                    display_name: displayName || null,
+                    team_name: teamName,
+                    driver_number: driverNumber || null,
+                    points: points
+                };
+                
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/api/driver-standings/${id}` : '/api/driver-standings';
+                
+                fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    closeModal('driver-standing-modal');
+                    loadDriverStandings();
+                    showAlert(id ? 'Driver standing updated successfully' : 'Driver standing added successfully');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('Error saving driver standing: ' + error.message, 'danger');
+                });
+            });
+        } else {
+            console.error('Could not find driver-standing-form element');
+        }
+        
+        // ... existing code ...
+    });
+
+    // ... existing code ...
 });
+
+// ... existing code ...
 
 // Widget functionality
 function initializeWidgets() {
