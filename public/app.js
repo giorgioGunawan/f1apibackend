@@ -6,6 +6,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const menuItems = document.querySelectorAll('.sidebar-menu li');
     const sections = document.querySelectorAll('.section');
 
+    // Load data for the active section immediately when page loads
+    const activeSection = document.querySelector('.section.active');
+    if (activeSection) {
+        const sectionId = activeSection.id;
+        loadDataForSection(sectionId);
+    }
+
+    // Function to load data based on section ID
+    function loadDataForSection(sectionId) {
+        switch(sectionId) {
+            case 'races':
+                loadRaces();
+                break;
+            case 'driver-standings':
+                loadDriverStandings();
+                break;
+            case 'constructor-standings':
+                loadConstructorStandings();
+                break;
+            case 'live-race':
+                loadLiveRace();
+                break;
+            case 'widgets':
+                initializeWidgets();
+                break;
+        }
+    }
+
     menuItems.forEach(item => {
         item.addEventListener('click', function() {
             // Remove active class from all menu items and sections
@@ -18,23 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById(sectionId).classList.add('active');
 
             // Load data for the selected section
-            switch(sectionId) {
-                case 'races':
-                    loadRaces();
-                    break;
-                case 'results':
-                    loadResults();
-                    break;
-                case 'driver-standings':
-                    loadDriverStandings();
-                    break;
-                case 'constructor-standings':
-                    loadConstructorStandings();
-                    break;
-                case 'live-race':
-                    loadLiveRace();
-                    break;
-            }
+            loadDataForSection(sectionId);
         });
     });
 
@@ -108,16 +120,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showAlert(message, type = 'success') {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type}`;
-        alertDiv.textContent = message;
+        // Remove any existing alerts
+        const existingAlerts = document.querySelectorAll('.alert');
+        existingAlerts.forEach(alert => alert.remove());
         
-        const mainContent = document.querySelector('.main-content');
-        mainContent.insertBefore(alertDiv, mainContent.firstChild);
+        // Create alert element
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.innerHTML = `
+            <span>${message}</span>
+            <button class="close-alert">&times;</button>
+        `;
         
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 3000);
+        // Add alert to the document
+        document.body.appendChild(alert);
+        
+        // Add event listener to close button
+        alert.querySelector('.close-alert').addEventListener('click', function() {
+            alert.remove();
+        });
+        
+        // Auto-dismiss after 5 seconds (except for errors and warnings)
+        if (type !== 'danger' && type !== 'warning') {
+            setTimeout(() => {
+                if (document.body.contains(alert)) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+        
+        return alert;
     }
 
     // Global variable to store driver standings data
@@ -125,9 +157,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load driver standings data
     function loadDriverStandings() {
+        console.log('Loading driver standings...');
+        
         fetch('/api/driver-standings')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Driver standings data loaded:', data);
                 driversData = data;
                 renderDriverStandingsTable(data);
                 
@@ -136,6 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error loading driver standings:', error);
+                showAlert('Failed to load driver standings: ' + error.message, 'danger');
             });
     }
 
@@ -158,7 +199,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.value = JSON.stringify({
                     name: driver.driver_name,
                     team: driver.team_name,
-                    number: driver.driver_number
+                    number: driver.driver_number,
+                    display: driver.display_name
                 });
                 option.textContent = `${driver.driver_name} (${driver.driver_number || 'N/A'}) - ${driver.team_name}`;
                 select.appendChild(option);
@@ -445,106 +487,564 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load races
     function loadRaces() {
-        fetch('/api/races')
+        fetch(`${API_BASE_URL}/races`)
             .then(response => response.json())
-            .then(races => {
+            .then(data => {
                 const tableBody = document.querySelector('#races-table tbody');
                 tableBody.innerHTML = '';
                 
-                // Sort races by round number (lowest to highest)
-                races.sort((a, b) => {
-                    // Convert to numbers to ensure proper numeric sorting
-                    const roundA = parseInt(a.round, 10);
-                    const roundB = parseInt(b.round, 10);
-                    return roundA - roundB;
-                });
-                
-                races.forEach(race => {
+                data.forEach(race => {
                     const row = document.createElement('tr');
-                    row.dataset.id = race.id;
-                    
-                    // Format race date
-                    const raceDate = new Date(race.datetime_race * 1000).toLocaleDateString();
-                    
-                    // Format podium
-                    let podium = 'Not completed';
-                    if (race.first_place) {
-                        podium = `1. ${race.first_place}`;
-                        if (race.second_place) podium += `<br>2. ${race.second_place}`;
-                        if (race.third_place) podium += `<br>3. ${race.third_place}`;
-                    }
-                    
                     row.innerHTML = `
-                        <td>${race.round}</td>
+                        <td>${race.round || 'N/A'}</td>
                         <td>${race.name}</td>
                         <td>${race.location}</td>
-                        <td>${raceDate}</td>
-                        <td>${podium}</td>
+                        <td>${formatDateTime(race.datetime_race)}</td>
                         <td>
-                            <i class="fas fa-edit action-icon edit-icon edit-race-btn"></i>
-                            <i class="fas fa-trash-alt action-icon delete-icon delete-race-btn"></i>
+                            <div class="action-buttons">
+                                <button class="btn btn-info btn-sm view-race" data-id="${race.id}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-primary btn-sm edit-race" data-id="${race.id}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm delete-race" data-id="${race.id}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     `;
-                    
                     tableBody.appendChild(row);
                 });
                 
-                // Add event listeners for edit and delete buttons
-                console.log('Adding race event listeners');
-                addRaceEventListeners();
+                // Add event listeners for the view buttons
+                document.querySelectorAll('.view-race').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const raceId = this.getAttribute('data-id');
+                        viewRaceDetails(raceId);
+                    });
+                });
+                
+                // Add event listeners for edit buttons
+                document.querySelectorAll('.edit-race').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const raceId = this.getAttribute('data-id');
+                        editRace(raceId);
+                    });
+                });
+                
+                // Add event listeners for delete buttons
+                document.querySelectorAll('.delete-race').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const raceId = this.getAttribute('data-id');
+                        deleteRace(raceId);
+                    });
+                });
             })
             .catch(error => {
                 console.error('Error loading races:', error);
             });
     }
 
-    function addRaceEventListeners() {
-        // Add event listeners for edit buttons
-        document.querySelectorAll('.edit-race-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const row = this.closest('tr');
-                const id = row.dataset.id;
-                console.log('Edit race clicked for ID:', id);
-                editRace(id);
-            });
-        });
-        
-        // Add event listeners for delete buttons
-        document.querySelectorAll('.delete-race-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const row = this.closest('tr');
-                const id = row.dataset.id;
-                if (confirm('Are you sure you want to delete this race?')) {
-                    deleteRace(id);
-                }
-            });
-        });
-    }
-
-    // Add race
-    document.getElementById('add-race-btn').addEventListener('click', () => {
-        document.getElementById('race-form-title').textContent = 'Add Race';
-        document.getElementById('race-form').reset();
-        document.getElementById('race-id').value = '';
-        
-        openModal('race-modal');
-        
-        // Fetch drivers for the dropdowns
-        fetch('/api/driver-standings')
+    // Update the viewRaceDetails function to include results and add result buttons
+    function viewRaceDetails(raceId) {
+        fetch(`${API_BASE_URL}/races/${raceId}`)
             .then(response => response.json())
-            .then(drivers => {
-                // Sort drivers alphabetically by name
-                drivers.sort((a, b) => a.driver_name.localeCompare(b.driver_name));
+            .then(race => {
+                // Create modal for race details
+                const modal = document.createElement('div');
+                modal.className = 'modal race-details-modal';
+                modal.id = 'race-details-modal';
+                modal.style.display = 'block';
                 
-                // Populate race podium dropdowns
-                populateDriverDropdowns('race-first', drivers);
-                populateDriverDropdowns('race-second', drivers);
-                populateDriverDropdowns('race-third', drivers);
+                // Format all session times
+                const fp1Time = formatDateTime(race.datetime_fp1);
+                const fp2Time = formatDateTime(race.datetime_fp2);
+                const fp3Time = formatDateTime(race.datetime_fp3);
+                const sprintTime = formatDateTime(race.datetime_sprint);
+                const qualifyingTime = formatDateTime(race.datetime_qualifying);
+                const raceTime = formatDateTime(race.datetime_race);
+                
+                // Create modal content
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 900px; width: 90%;">
+                        <span class="close-modal">&times;</span>
+                        <h2>${race.name} Details</h2>
+                        
+                        <div class="tabs">
+                            <button class="tab-button active" data-tab="info">Race Info</button>
+                            <button class="tab-button" data-tab="fp1">Practice 1</button>
+                            <button class="tab-button" data-tab="fp2">Practice 2</button>
+                            <button class="tab-button" data-tab="fp3">Practice 3</button>
+                            <button class="tab-button" data-tab="sprint">Sprint</button>
+                            <button class="tab-button" data-tab="qualifying">Qualifying</button>
+                            <button class="tab-button" data-tab="race">Race</button>
+                        </div>
+                        
+                        <div class="tab-content">
+                            <div class="tab-pane active" id="info-tab">
+                                <div class="race-details">
+                                    <div class="detail-section">
+                                        <h3>Race Information</h3>
+                                        <p><strong>Round:</strong> ${race.round || 'N/A'}</p>
+                                        <p><strong>Location:</strong> ${race.location}</p>
+                                    </div>
+                                    
+                                    <div class="detail-section">
+                                        <h3>Session Times (UTC)</h3>
+                                        <p><strong>Practice 1:</strong> ${fp1Time}</p>
+                                        <p><strong>Practice 2:</strong> ${fp2Time}</p>
+                                        <p><strong>Practice 3:</strong> ${fp3Time}</p>
+                                        <p><strong>Sprint:</strong> ${sprintTime}</p>
+                                        <p><strong>Qualifying:</strong> ${qualifyingTime}</p>
+                                        <p><strong>Race:</strong> ${raceTime}</p>
+                                    </div>
+                                    
+                                    <div class="detail-section">
+                                        <h3>Podium Results</h3>
+                                        <p><strong>1st Place:</strong> ${race.first_place || 'Not yet determined'}</p>
+                                        <p><strong>2nd Place:</strong> ${race.second_place || 'Not yet determined'}</p>
+                                        <p><strong>3rd Place:</strong> ${race.third_place || 'Not yet determined'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-pane" id="fp1-tab">
+                                <div class="results-header">
+                                    <h3>Practice 1 Results</h3>
+                                    <button class="btn btn-primary add-results-btn" data-race-id="${race.id}" data-session="fp1">
+                                        Add/Edit Results
+                                    </button>
+                                </div>
+                                <div class="results-container" id="fp1-results">
+                                    <p class="loading-text">Loading results...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-pane" id="fp2-tab">
+                                <div class="results-header">
+                                    <h3>Practice 2 Results</h3>
+                                    <button class="btn btn-primary add-results-btn" data-race-id="${race.id}" data-session="fp2">
+                                        Add/Edit Results
+                                    </button>
+                                </div>
+                                <div class="results-container" id="fp2-results">
+                                    <p class="loading-text">Loading results...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-pane" id="fp3-tab">
+                                <div class="results-header">
+                                    <h3>Practice 3 Results</h3>
+                                    <button class="btn btn-primary add-results-btn" data-race-id="${race.id}" data-session="fp3">
+                                        Add/Edit Results
+                                    </button>
+                                </div>
+                                <div class="results-container" id="fp3-results">
+                                    <p class="loading-text">Loading results...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-pane" id="sprint-tab">
+                                <div class="results-header">
+                                    <h3>Sprint Results</h3>
+                                    <button class="btn btn-primary add-results-btn" data-race-id="${race.id}" data-session="sprint">
+                                        Add/Edit Results
+                                    </button>
+                                </div>
+                                <div class="results-container" id="sprint-results">
+                                    <p class="loading-text">Loading results...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-pane" id="qualifying-tab">
+                                <div class="results-header">
+                                    <h3>Qualifying Results</h3>
+                                    <button class="btn btn-primary add-results-btn" data-race-id="${race.id}" data-session="qualifying">
+                                        Add/Edit Results
+                                    </button>
+                                </div>
+                                <div class="results-container" id="qualifying-results">
+                                    <p class="loading-text">Loading results...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-pane" id="race-tab">
+                                <div class="results-header">
+                                    <h3>Race Results</h3>
+                                    <button class="btn btn-primary add-results-btn" data-race-id="${race.id}" data-session="race">
+                                        Add/Edit Results
+                                    </button>
+                                </div>
+                                <div class="results-container" id="race-results">
+                                    <p class="loading-text">Loading results...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Add modal to the document
+                document.body.appendChild(modal);
+                
+                // Add event listener to close the modal
+                modal.querySelector('.close-modal').addEventListener('click', function() {
+                    modal.remove();
+                });
+                
+                // Close modal when clicking outside
+                modal.addEventListener('click', function(event) {
+                    if (event.target === modal) {
+                        modal.remove();
+                    }
+                });
+                
+                // Add tab switching functionality
+                const tabButtons = modal.querySelectorAll('.tab-button');
+                const tabPanes = modal.querySelectorAll('.tab-pane');
+                
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        // Remove active class from all buttons and panes
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        tabPanes.forEach(pane => pane.classList.remove('active'));
+                        
+                        // Add active class to clicked button and corresponding pane
+                        this.classList.add('active');
+                        const tabId = this.getAttribute('data-tab');
+                        document.getElementById(`${tabId}-tab`).classList.add('active');
+                        
+                        // Load results for the selected tab if it's a session tab
+                        if (tabId !== 'info') {
+                            loadResultsForSession(race.id, tabId);
+                        }
+                    });
+                });
+                
+                // Add event listeners for add results buttons
+                modal.querySelectorAll('.add-results-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const raceId = this.getAttribute('data-race-id');
+                        const session = this.getAttribute('data-session');
+                        openAddResultsModal(raceId, session);
+                    });
+                });
             })
             .catch(error => {
-                console.error('Error fetching drivers for new race:', error);
+                console.error('Error loading race details:', error);
+                showAlert('Error loading race details', 'danger');
             });
-    });
+    }
+
+    // Function to load results for a specific session
+    function loadResultsForSession(raceId, session) {
+        const resultsContainer = document.getElementById(`${session}-results`);
+        if (!resultsContainer) return;
+        
+        resultsContainer.innerHTML = '<p class="loading-text">Loading results...</p>';
+        
+        fetch(`${API_BASE_URL}/results?race_id=${raceId}&session=${session}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load results');
+                }
+                return response.json();
+            })
+            .then(results => {
+                if (results.length === 0) {
+                    resultsContainer.innerHTML = '<p class="no-results">No results available for this session.</p>';
+                    return;
+                }
+                
+                // Sort results by position
+                results.sort((a, b) => a.position - b.position);
+                
+                // Create table to display results
+                const table = document.createElement('table');
+                table.className = 'data-table';
+                
+                // Create table header
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th>Pos</th>
+                        <th>Driver</th>
+                        <th>Team</th>
+                        <th>Time/Gap</th>
+                        <th>Laps</th>
+                        ${session === 'race' ? '<th>Points</th>' : ''}
+                    </tr>
+                `;
+                table.appendChild(thead);
+                
+                // Create table body
+                const tbody = document.createElement('tbody');
+                results.forEach(result => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${result.position}</td>
+                        <td>${result.driver_name}</td>
+                        <td>${result.team_name}</td>
+                        <td>${result.time || '-'}</td>
+                        <td>${result.laps || '-'}</td>
+                        ${session === 'race' ? `<td>${result.points || '0'}</td>` : ''}
+                    `;
+                    tbody.appendChild(row);
+                });
+                table.appendChild(tbody);
+                
+                // Clear container and add table
+                resultsContainer.innerHTML = '';
+                resultsContainer.appendChild(table);
+            })
+            .catch(error => {
+                console.error('Error loading results:', error);
+                resultsContainer.innerHTML = `<p class="error-text">Error loading results: ${error.message}</p>`;
+            });
+    }
+
+    // Function to open the add results modal
+    function openAddResultsModal(raceId, session) {
+        // Fetch current driver standings to pre-fill the form
+        fetch(`${API_BASE_URL}/driver-standings`)
+            .then(response => response.json())
+            .then(drivers => {
+                // Sort drivers by current position
+                drivers.sort((a, b) => a.position - b.position);
+                
+                // Create modal for adding results
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.id = 'add-results-modal';
+                modal.style.display = 'block';
+                
+                // Get session name for display
+                const sessionNames = {
+                    'fp1': 'Practice 1',
+                    'fp2': 'Practice 2',
+                    'fp3': 'Practice 3',
+                    'sprint': 'Sprint',
+                    'qualifying': 'Qualifying',
+                    'race': 'Race'
+                };
+                
+                // Create modal content with pre-filled driver rows
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 900px; width: 95%;">
+                        <span class="close-modal">&times;</span>
+                        <h2>Add ${sessionNames[session]} Results</h2>
+                        
+                        <div class="drag-instructions">
+                            <i class="fas fa-info-circle"></i> Drag and drop rows to reorder drivers. Positions will update automatically.
+                        </div>
+                        
+                        <form id="results-form">
+                            <input type="hidden" id="results-race-id" value="${raceId}">
+                            <input type="hidden" id="results-session" value="${session}">
+                            
+                            <div class="table-container">
+                                <table class="data-table" id="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Pos</th>
+                                            <th>Driver</th>
+                                            <th>Team</th>
+                                            <th>Time/Gap</th>
+                                            <th>Laps</th>
+                                            ${session === 'race' ? '<th>Points</th>' : ''}
+                                        </tr>
+                                    </thead>
+                                    <tbody id="results-tbody">
+                                        ${generateDriverRows(drivers, session)}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="form-buttons">
+                                <button type="button" class="btn" id="results-cancel-btn">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save Results</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+                
+                // Add modal to the document
+                document.body.appendChild(modal);
+                
+                // Add event listener to close the modal
+                modal.querySelector('.close-modal').addEventListener('click', function() {
+                    modal.remove();
+                });
+                
+                // Close modal when clicking outside
+                modal.addEventListener('click', function(event) {
+                    if (event.target === modal) {
+                        modal.remove();
+                    }
+                });
+                
+                // Add event listener for cancel button
+                document.getElementById('results-cancel-btn').addEventListener('click', function() {
+                    modal.remove();
+                });
+                
+                // Add event listener for form submission
+                document.getElementById('results-form').addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    saveResults(raceId, session);
+                });
+                
+                // Initialize drag and drop functionality
+                initResultsDragAndDrop();
+                
+                // Check if there are existing results for this race and session
+                fetch(`${API_BASE_URL}/results?race_id=${raceId}&session=${session}`)
+                    .then(response => response.json())
+                    .then(existingResults => {
+                        if (existingResults.length > 0) {
+                            // If there are existing results, populate the form with them
+                            populateExistingResults(existingResults, session);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching existing results:', error);
+                    });
+            })
+            .catch(error => {
+                console.error('Error fetching drivers:', error);
+                showAlert('Error loading driver data', 'danger');
+            });
+    }
+
+    // Add this function to generate pre-filled driver rows with drag and drop functionality
+    function generateDriverRows(drivers, session) {
+        let rows = '';
+        
+        // Generate 20 rows, using available driver data where possible
+        for (let i = 0; i < 20; i++) {
+            const driver = i < drivers.length ? drivers[i] : null;
+            const position = i + 1;
+            
+            rows += `
+                <tr class="draggable-row" draggable="true">
+                    <td class="drag-handle">
+                        <i class="fas fa-grip-vertical"></i>
+                        <input type="number" class="form-control position-input" value="${position}" min="1" max="20" required readonly>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control driver-input" value="${driver ? driver.driver_name : ''}" required>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control team-input" value="${driver ? driver.team_name : ''}" required>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control time-input" placeholder="e.g. 1:23.456 or +2.345s">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control laps-input" min="0">
+                    </td>
+                    ${session === 'race' ? `
+                        <td>
+                            <input type="number" class="form-control points-input" value="${getDefaultPoints(position)}" min="0">
+                        </td>
+                    ` : ''}
+                </tr>
+            `;
+        }
+        
+        return rows;
+    }
+
+    // Function to get default points based on position (for race results)
+    function getDefaultPoints(position) {
+        const pointsSystem = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        return position <= pointsSystem.length ? pointsSystem[position - 1] : 0;
+    }
+
+    // Function to save results
+    function saveResults(raceId, session) {
+        const rows = document.querySelectorAll('#results-tbody .draggable-row');
+        const results = [];
+        
+        // Collect data from each row
+        rows.forEach(row => {
+            const position = row.querySelector('.position-input').value;
+            const driverName = row.querySelector('.driver-input').value;
+            const teamName = row.querySelector('.team-input').value;
+            const time = row.querySelector('.time-input').value;
+            const laps = row.querySelector('.laps-input').value;
+            
+            // Skip empty rows
+            if (!driverName || !teamName) return;
+            
+            const result = {
+                race_id: raceId,
+                session_type: session,
+                position: position,
+                driver_name: driverName,
+                team_name: teamName,
+                time: time || null,
+                laps: laps || null
+            };
+            
+            // Add points for race results
+            if (session === 'race') {
+                result.points = row.querySelector('.points-input').value || 0;
+            }
+            
+            results.push(result);
+        });
+        
+        // If there are no results to save, show an error
+        if (results.length === 0) {
+            showAlert('No valid results to save. Please add at least one driver.', 'warning');
+            return;
+        }
+        
+        // Show loading indicator
+        const loadingAlert = showAlert('Saving results...', 'info');
+        
+        // Save each result individually using the existing API
+        const savePromises = results.map(result => {
+            return fetch(`${API_BASE_URL}/results`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(result)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`Failed to save result for ${result.driver_name}: ${text}`);
+                    });
+                }
+                return response.json();
+            });
+        });
+        
+        // Wait for all saves to complete
+        Promise.all(savePromises)
+            .then(() => {
+                // Remove loading alert
+                if (loadingAlert) loadingAlert.remove();
+                
+                showAlert('Results saved successfully', 'success');
+                
+                // Close the modal
+                document.getElementById('add-results-modal').remove();
+                
+                // Refresh the results display
+                loadResultsForSession(raceId, session);
+            })
+            .catch(error => {
+                // Remove loading alert
+                if (loadingAlert) loadingAlert.remove();
+                
+                console.error('Error saving results:', error);
+                showAlert(`Error: ${error.message}`, 'danger');
+            });
+    }
 
     // Edit race
     function editRace(id) {
@@ -705,222 +1205,84 @@ document.addEventListener('DOMContentLoaded', function() {
         closeModal('race-modal');
     });
 
-    // ===== RESULTS =====
-    const resultsTable = document.getElementById('results-table').querySelector('tbody');
-    const resultForm = document.getElementById('result-form');
-
-    function loadResults() {
-        fetch('api/results')
-            .then(response => response.json())
-            .then(results => {
-                const tableBody = document.querySelector('#results-table tbody');
-                tableBody.innerHTML = '';
-                
-                // Also fetch races to get race names
-                fetch('api/races')
-                    .then(response => response.json())
-                    .then(races => {
-                        const raceMap = {};
-                        races.forEach(race => {
-                            raceMap[race.id] = race.name;
-                        });
-                        
-                        results.forEach(result => {
-                            const row = document.createElement('tr');
-                            row.dataset.id = result.id;
-                            
-                            // Format session type
-                            const sessionType = formatSessionType(result.session_type);
-                            
-                            row.innerHTML = `
-                                <td>${raceMap[result.race_id] || `Race ${result.race_id}`}</td>
-                                <td>${sessionType}</td>
-                                <td>${result.position}</td>
-                                <td>${result.driver_name}</td>
-                                <td>${result.team_name}</td>
-                                <td>${result.time || '-'}</td>
-                                <td>${result.points}</td>
-                                <td>
-                                    <i class="fas fa-edit action-icon edit-icon edit-result-btn"></i>
-                                    <i class="fas fa-trash-alt action-icon delete-icon delete-result-btn"></i>
-                                </td>
-                            `;
-                            
-                            tableBody.appendChild(row);
-                        });
-                        
-                        // Add event listeners for edit and delete buttons
-                        addResultEventListeners();
-                    });
-            })
-            .catch(error => {
-                console.error('Error loading results:', error);
-            });
-    }
-
-    // Add result
-    document.getElementById('add-result-btn').addEventListener('click', () => {
-        resultForm.reset();
-        document.getElementById('result-id').value = '';
-        document.getElementById('result-form-title').textContent = 'Add Result';
-        document.getElementById('result-submit-btn').textContent = 'Add Result';
-        openModal('result-modal');
-    });
-
-    function addResultEventListeners() {
-        document.querySelectorAll('.edit-result-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const row = this.closest('tr');
-                const id = row.dataset.id;
-                editResult(id);
-            });
-        });
-
-        document.querySelectorAll('.delete-result-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const row = this.closest('tr');
-                const id = row.dataset.id;
-                if (confirm('Are you sure you want to delete this result?')) {
-                    deleteResult(id);
-                }
-            });
-        });
-    }
-
-    function editResult(resultId) {
-        fetch('/api/results/' + resultId)
-            .then(response => response.json())
-            .then(result => {
-                document.getElementById('result-id').value = result.id;
-                document.getElementById('result-race').value = result.race_id;
-                document.getElementById('result-session').value = result.session_type;
-                document.getElementById('result-position').value = result.position;
-                document.getElementById('result-driver').value = result.driver_name;
-                document.getElementById('result-team').value = result.team_name;
-                document.getElementById('result-time').value = result.time || '';
-                document.getElementById('result-points').value = result.points || 0;
-                document.getElementById('result-laps').value = result.laps || 0;
-                
-                document.getElementById('result-form-title').textContent = 'Edit Result';
-                document.getElementById('result-submit-btn').textContent = 'Update Result';
-                openModal('result-modal');
-            })
-            .catch(error => {
-                console.error('Error loading result:', error);
-                showAlert('Error loading result details', 'danger');
-            });
-    }
-
-    function deleteResult(resultId) {
-        fetch('/api/results/' + resultId, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(() => {
-            loadResults();
-            showAlert('Result deleted successfully');
-        })
-        .catch(error => {
-            console.error('Error deleting result:', error);
-            showAlert('Error deleting result', 'danger');
-        });
-    }
-
-    // Handle result form submission
-    resultForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const id = document.getElementById('result-id').value;
-        const driverSelect = document.getElementById('result-driver');
-        let driverName, teamName;
-        
-        if (driverSelect.value) {
-            const driverData = JSON.parse(driverSelect.value);
-            driverName = driverData.name;
-            teamName = driverData.team;
-        } else {
-            alert('Please select a driver');
-            return;
-        }
-        
-        const data = {
-            race_id: document.getElementById('result-race').value,
-            session_type: document.getElementById('result-session').value,
-            position: document.getElementById('result-position').value,
-            driver_name: driverName,
-            team_name: teamName,
-            time: document.getElementById('result-time').value || null,
-            laps: document.getElementById('result-laps').value || null,
-            points: document.getElementById('result-points').value || null
-        };
-        
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? '/api/results/' + id : '/api/results';
-        
-        fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            closeModal('result-modal');
-            loadResults();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('There was a problem saving the result');
-        });
-    });
-
-    // Cancel button for results
-    document.getElementById('result-cancel-btn').addEventListener('click', () => {
-        closeModal('result-modal');
-    });
-
     // ===== DRIVER STANDINGS =====
     const driverStandingsTable = document.getElementById('driver-standings-table').querySelector('tbody');
     const driverStandingForm = document.getElementById('driver-standing-form');
 
-    // Function to render driver standings table
+    // Simplified render driver standings table function
     function renderDriverStandingsTable(data) {
-        const tbody = document.querySelector('#driver-standings-table tbody');
-        tbody.innerHTML = '';
+        console.log('Starting to render driver standings table');
         
-        if (data.length === 0) {
-            const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="6">No driver standings found</td>';
-            tbody.appendChild(row);
+        // Get the table body element
+        const tableBody = document.getElementById('driver-standings-table-body');
+        if (!tableBody) {
+            console.error('Driver standings table body element not found');
             return;
         }
         
-        data.forEach(standing => {
-            const row = document.createElement('tr');
-            row.dataset.id = standing.id; // Store ID as data attribute
-            
-            row.innerHTML = `
-                <td>${standing.driver_name}</td>
-                <td>${standing.driver_number || '-'}</td>
-                <td>${standing.team_name}</td>
-                <td>${standing.points}</td>
-                <td>
-                    <i class="fas fa-edit action-icon edit-icon edit-driver-standing-btn"></i>
-                    <i class="fas fa-trash-alt action-icon delete-icon delete-driver-standing-btn"></i>
-                </td>
-            `;
-            
-            tbody.appendChild(row);
-        });
+        // Clear the table
+        tableBody.innerHTML = '';
         
-        // Add event listeners for edit and delete buttons
-        addDriverStandingEventListeners();
+        try {
+            // Sort by points (descending)
+            data.sort((a, b) => b.points - a.points);
+            
+            // Create and append each row
+            data.forEach((standing, index) => {
+                const row = document.createElement('tr');
+                
+                // Create a simple row without the display name formatting for now
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${standing.driver_name || 'Unknown'} ${standing.display_name ? `(${standing.display_name})` : ''}</td>
+                    <td>${standing.team_name || 'Unknown'}</td>
+                    <td>${standing.driver_number || 'N/A'}</td>
+                    <td>${standing.points || 0}</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-info edit-driver-standing" data-id="${standing.id}">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-danger delete-driver-standing" data-id="${standing.id}">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Add event listeners to buttons
+            document.querySelectorAll('.edit-driver-standing').forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    editDriverStanding(id);
+                });
+            });
+            
+            document.querySelectorAll('.delete-driver-standing').forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    deleteDriverStanding(id);
+                });
+            });
+            
+            console.log('Driver standings table rendering complete');
+            
+            // Hide loading indicator if it exists
+            const loadingIndicator = document.querySelector('#driver-standings .loading-indicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            
+            // Show the table if it was hidden
+            const table = document.querySelector('#driver-standings .data-table');
+            if (table) {
+                table.style.display = 'table';
+            }
+        } catch (error) {
+            console.error('Error rendering driver standings table:', error);
+            showAlert('Error rendering driver standings: ' + error.message, 'danger');
+        }
     }
 
     // Add driver standing
@@ -987,6 +1349,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('driver-standing-team').value = data.team_name || '';
         document.getElementById('driver-standing-points').value = data.points || '';
         document.getElementById('driver-standing-number').value = data.driver_number || '';
+        document.getElementById('driver-standing-display-name').value = data.display_name || '';
     }
 
     // Event listener for driver standing form submission
@@ -998,7 +1361,8 @@ document.addEventListener('DOMContentLoaded', function() {
             driver_name: document.getElementById('driver-standing-name').value,
             team_name: document.getElementById('driver-standing-team').value,
             points: parseFloat(document.getElementById('driver-standing-points').value),
-            driver_number: document.getElementById('driver-standing-number').value || null
+            driver_number: document.getElementById('driver-standing-number').value || null,
+            display_name: document.getElementById('driver-standing-display-name').value || null
         };
         
         const method = id ? 'PUT' : 'POST';
@@ -1210,8 +1574,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>${entry.current_lap}</td>
                         <td>${entry.is_dnf ? 'Yes' : 'No'}</td>
                         <td>
-                            <i class="fas fa-edit action-icon edit-icon edit-live-race-btn"></i>
-                            <i class="fas fa-trash-alt action-icon delete-icon delete-live-race-btn"></i>
+                            <i class="fas fa-edit action-icon edit-live-race-btn"></i>
+                            <i class="fas fa-trash-alt action-icon delete-live-race-btn"></i>
                         </td>
                     `;
                     
@@ -1871,6 +2235,7 @@ function populateLiveRaceDriverDropdown(drivers) {
         option.textContent = `${driver.driver_name} (${driver.team_name})`;
         option.dataset.team = driver.team_name;
         option.dataset.number = driver.driver_number;
+        option.dataset.display = driver.display_name;
         select.appendChild(option);
     });
     
@@ -1910,4 +2275,161 @@ function setSelectValue(selectId, value) {
         console.warn(`Could not find option with value "${value}" in select "${selectId}"`);
         console.log('Available options:', Array.from(select.options).map(o => o.value));
     }
+}
+
+// Function to initialize drag and drop functionality for results table
+function initResultsDragAndDrop() {
+    const tbody = document.getElementById('results-tbody');
+    if (!tbody) return;
+    
+    let draggedRow = null;
+    
+    // Add event listeners to all draggable rows
+    const rows = tbody.querySelectorAll('.draggable-row');
+    
+    rows.forEach(row => {
+        // Dragstart event - when the user starts dragging
+        row.addEventListener('dragstart', function(e) {
+            draggedRow = this;
+            // Add a class to style the dragged row
+            this.classList.add('dragging');
+            // Set the drag effect
+            e.dataTransfer.effectAllowed = 'move';
+            // Set some data (required for Firefox)
+            e.dataTransfer.setData('text/plain', '');
+        });
+        
+        // Dragend event - when the user stops dragging
+        row.addEventListener('dragend', function() {
+            this.classList.remove('dragging');
+            draggedRow = null;
+            // Update positions after drag
+            updatePositions();
+        });
+        
+        // Dragover event - when an element is dragged over a valid drop target
+        row.addEventListener('dragover', function(e) {
+            e.preventDefault(); // Allow drop
+            if (draggedRow && draggedRow !== this) {
+                // Determine if we should insert before or after this row
+                const rect = this.getBoundingClientRect();
+                const midpoint = (rect.top + rect.bottom) / 2;
+                
+                if (e.clientY < midpoint) {
+                    // Insert before
+                    tbody.insertBefore(draggedRow, this);
+                } else {
+                    // Insert after
+                    const nextSibling = this.nextElementSibling;
+                    if (nextSibling) {
+                        tbody.insertBefore(draggedRow, nextSibling);
+                    } else {
+                        tbody.appendChild(draggedRow);
+                    }
+                }
+            }
+        });
+    });
+    
+    // Function to update position numbers after drag and drop
+    function updatePositions() {
+        const rows = tbody.querySelectorAll('.draggable-row');
+        rows.forEach((row, index) => {
+            const position = index + 1;
+            row.querySelector('.position-input').value = position;
+            
+            // Update points for race results based on new position
+            if (document.getElementById('results-session').value === 'race') {
+                const pointsInput = row.querySelector('.points-input');
+                if (pointsInput && !pointsInput.dataset.customValue) {
+                    pointsInput.value = getDefaultPoints(position);
+                }
+            }
+        });
+    }
+}
+
+// Function to populate form with existing results
+function populateExistingResults(results, session) {
+    const tbody = document.getElementById('results-tbody');
+    if (!tbody) return;
+    
+    // Clear existing rows
+    tbody.innerHTML = '';
+    
+    // Sort results by position
+    results.sort((a, b) => a.position - b.position);
+    
+    // Add rows for each result
+    results.forEach(result => {
+        const row = document.createElement('tr');
+        row.className = 'draggable-row';
+        row.draggable = true;
+        
+        row.innerHTML = `
+            <td class="drag-handle">
+                <i class="fas fa-grip-vertical"></i>
+                <input type="number" class="form-control position-input" value="${result.position}" min="1" max="20" required readonly>
+            </td>
+            <td>
+                <input type="text" class="form-control driver-input" value="${result.driver_name}" required>
+            </td>
+            <td>
+                <input type="text" class="form-control team-input" value="${result.team_name}" required>
+            </td>
+            <td>
+                <input type="text" class="form-control time-input" value="${result.time || ''}" placeholder="e.g. 1:23.456 or +2.345s">
+            </td>
+            <td>
+                <input type="number" class="form-control laps-input" value="${result.laps || ''}" min="0">
+            </td>
+            ${session === 'race' ? `
+                <td>
+                    <input type="number" class="form-control points-input" value="${result.points || 0}" min="0" data-custom-value="true">
+                </td>
+            ` : ''}
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    // Add empty rows if needed to reach 20 total
+    const currentRowCount = tbody.querySelectorAll('tr').length;
+    if (currentRowCount < 20) {
+        for (let i = currentRowCount; i < 20; i++) {
+            const position = i + 1;
+            const row = document.createElement('tr');
+            row.className = 'draggable-row';
+            row.draggable = true;
+            
+            row.innerHTML = `
+                <td class="drag-handle">
+                    <i class="fas fa-grip-vertical"></i>
+                    <input type="number" class="form-control position-input" value="${position}" min="1" max="20" required readonly>
+                </td>
+                <td>
+                    <input type="text" class="form-control driver-input" value="" required>
+                </td>
+                <td>
+                    <input type="text" class="form-control team-input" value="" required>
+                </td>
+                <td>
+                    <input type="text" class="form-control time-input" placeholder="e.g. 1:23.456 or +2.345s">
+                </td>
+                <td>
+                    <input type="number" class="form-control laps-input" min="0">
+                </td>
+                ${session === 'race' ? `
+                    <td>
+                        <input type="number" class="form-control points-input" value="${getDefaultPoints(position)}" min="0">
+                    </td>
+                ` : ''}
+            `;
+            
+            tbody.appendChild(row);
+        }
+    }
+    
+    // Reinitialize drag and drop
+    initResultsDragAndDrop();
 } 

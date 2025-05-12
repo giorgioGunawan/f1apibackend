@@ -426,14 +426,14 @@ app.get('/api/driver-standings/:id', (req, res) => {
 
 // Add a new driver standing
 app.post('/api/driver-standings', (req, res) => {
-  const { driver_name, team_name, points, driver_number } = req.body;
+  const { driver_name, team_name, points, driver_number, display_name } = req.body;
   
   if (!driver_name || !team_name || points === undefined) {
     return res.status(400).json({ error: 'Please provide driver_name, team_name, and points' });
   }
   
-  db.run(`INSERT INTO driver_standings (driver_name, team_name, points, driver_number) VALUES (?, ?, ?, ?)`,
-    [driver_name, team_name, points, driver_number || null],
+  db.run(`INSERT INTO driver_standings (driver_name, team_name, points, driver_number, display_name) VALUES (?, ?, ?, ?, ?)`,
+    [driver_name, team_name, points, driver_number || null, display_name || null],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -443,21 +443,22 @@ app.post('/api/driver-standings', (req, res) => {
         driver_name,
         team_name,
         points,
-        driver_number
+        driver_number,
+        display_name
       });
     });
 });
 
 // Update a driver standing
 app.put('/api/driver-standings/:id', (req, res) => {
-  const { driver_name, team_name, points, driver_number } = req.body;
+  const { driver_name, team_name, points, driver_number, display_name } = req.body;
   
   if (!driver_name || !team_name || points === undefined) {
     return res.status(400).json({ error: 'Please provide driver_name, team_name, and points' });
   }
   
-  db.run(`UPDATE driver_standings SET driver_name = ?, team_name = ?, points = ?, driver_number = ? WHERE id = ?`,
-    [driver_name, team_name, points, driver_number || null, req.params.id],
+  db.run(`UPDATE driver_standings SET driver_name = ?, team_name = ?, points = ?, driver_number = ?, display_name = ? WHERE id = ?`,
+    [driver_name, team_name, points, driver_number || null, display_name || null, req.params.id],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -470,7 +471,8 @@ app.put('/api/driver-standings/:id', (req, res) => {
         driver_name,
         team_name,
         points,
-        driver_number
+        driver_number,
+        display_name
       });
     });
 });
