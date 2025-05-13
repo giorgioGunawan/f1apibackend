@@ -3127,16 +3127,6 @@ function saveConstructorStanding(event) {
     const driverId2 = document.getElementById('driver-id-2').value;
     const driverId3 = document.getElementById('driver-id-3').value;
 
-    // Debug log
-    console.log('Form data:', {
-        id,
-        constructorName,
-        points,
-        driverId1,
-        driverId2,
-        driverId3
-    });
-
     const data = {
         constructor_name: constructorName,
         points: parseInt(points),
@@ -3147,8 +3137,6 @@ function saveConstructorStanding(event) {
     
     const method = id ? 'PUT' : 'POST';
     const url = id ? `/api/constructor-standings/${id}` : '/api/constructor-standings';
-    
-    console.log('Sending request:', { method, url, data }); // Debug log
 
     fetch(url, {
         method: method,
@@ -3158,15 +3146,64 @@ function saveConstructorStanding(event) {
         body: JSON.stringify(data)
     })
     .then(response => {
-        console.log('Response received:', response); // Debug log
         if (!response.ok) throw new Error('Network response was not ok');
         return response.json();
     })
     .then(responseData => {
-        console.log('Success response:', responseData); // Debug log
-        closeModal('constructor-standing-modal');
-        loadConstructorStandings();
-        showAlert(id ? 'Constructor standing updated successfully' : 'Constructor standing added successfully');
+        // First reload the data
+        return fetch('/api/constructor-standings')
+            .then(response => response.json())
+            .then(constructors => {
+                // Update the table
+                const tbody = document.querySelector('#constructor-standings-table tbody');
+                tbody.innerHTML = '';
+                constructors.forEach((constructor, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${constructor.constructor_name}</td>
+                        <td>${constructor.points}</td>
+                        <td>${constructor.driver_1_display_name || constructor.driver_1_name || 'TBA'}</td>
+                        <td>${constructor.driver_2_display_name || constructor.driver_2_name || 'TBA'}</td>
+                        <td>${constructor.driver_3_display_name || constructor.driver_3_name || 'TBA'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary edit-constructor-btn" data-id="${constructor.id}">Edit</button>
+                            <button class="btn btn-sm btn-danger delete-constructor-btn" data-id="${constructor.id}">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Re-attach event listeners
+                document.querySelectorAll('.edit-constructor-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        populateDriverDropdowns();
+                        setTimeout(() => {
+                            loadConstructorStandingDetails(id);
+                        }, 100);
+                    });
+                });
+
+                document.querySelectorAll('.delete-constructor-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        if (confirm('Are you sure you want to delete this constructor standing?')) {
+                            deleteConstructorStanding(this.getAttribute('data-id'));
+                        }
+                    });
+                });
+
+                // Close the modal
+                const modal = document.getElementById('constructor-standing-modal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+
+                // Show success message
+                showAlert(
+                    id ? 'Constructor standing updated successfully!' : 'Constructor standing added successfully!',
+                    'success'
+                );
+            });
     })
     .catch(error => {
         console.error('Error:', error);
