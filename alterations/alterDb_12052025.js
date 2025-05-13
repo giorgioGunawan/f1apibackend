@@ -27,21 +27,61 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
   console.log('Connected to the F1 races database for alteration');
   
-  // Add display_name column to driver_standings table
-  db.run(`ALTER TABLE driver_standings ADD COLUMN display_name TEXT`, (err) => {
-    if (err) {
-      console.error('Error adding display_name column:', err.message);
-    } else {
-      console.log('Successfully added display_name column to driver_standings table');
-    }
-    
-    // Close the database connection
-    db.close((err) => {
+  // Execute each SQL statement separately
+  db.serialize(() => {
+    db.run(`ALTER TABLE constructor_standings DROP COLUMN driver_name_1`, (err) => {
       if (err) {
-        console.error('Error closing database:', err.message);
+        console.error('Error dropping driver_name_3 column:', err.message);
       } else {
-        console.log('Database connection closed');
+        console.log('Successfully dropped driver_name_3 column');
       }
     });
+    db.run(`ALTER TABLE constructor_standings DROP COLUMN driver_name_2`, (err) => {
+      if (err) {
+        console.error('Error dropping driver_name_3 column:', err.message);
+      } else {
+        console.log('Successfully dropped driver_name_3 column');
+      }
+    });
+    db.run(`ALTER TABLE constructor_standings DROP COLUMN driver_name_3`, (err) => {
+      if (err) {
+        console.error('Error dropping driver_name_3 column:', err.message);
+      } else {
+        console.log('Successfully dropped driver_name_3 column');
+      }
+    });
+    
+    db.run(`ALTER TABLE constructor_standings ADD COLUMN driver_id_1 INTEGER REFERENCES driver_standings(id)`, (err) => {
+      if (err) {
+        console.error('Error adding driver_id_1 column:', err.message);
+      } else {
+        console.log('Successfully added driver_id_1 column');
+      }
+    });
+    
+    db.run(`ALTER TABLE constructor_standings ADD COLUMN driver_id_2 INTEGER REFERENCES driver_standings(id)`, (err) => {
+      if (err) {
+        console.error('Error adding driver_id_2 column:', err.message);
+      } else {
+        console.log('Successfully added driver_id_2 column');
+      }
+    });
+    
+    db.run(`ALTER TABLE constructor_standings ADD COLUMN driver_id_3 INTEGER REFERENCES driver_standings(id)`, (err) => {
+      if (err) {
+        console.error('Error adding driver_id_3 column:', err.message);
+      } else {
+        console.log('Successfully added driver_id_3 column');
+      }
+    });
+  });
+  
+  // Close the database connection
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err.message);
+    } else {
+      console.log('Database connection closed');
+    }
   });
 });

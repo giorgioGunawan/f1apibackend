@@ -539,78 +539,135 @@ app.delete('/api/driver-standings/:id', (req, res) => {
 // CONSTRUCTOR STANDINGS ENDPOINTS
 // Get all constructor standings
 app.get('/api/constructor-standings', (req, res) => {
-  db.all('SELECT * FROM constructor_standings ORDER BY points DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
+    // First check if the new columns exist
+    db.get("PRAGMA table_info(constructor_standings)", [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+
+        // Use the appropriate query based on which columns exist
+        const query = `
+            SELECT cs.*, 
+                d1.display_name as driver_1_display_name, 
+                d1.driver_name as driver_1_name, 
+                d1.team_name as driver_1_team,
+                d2.display_name as driver_2_display_name, 
+                d2.driver_name as driver_2_name, 
+                d2.team_name as driver_2_team,
+                d3.display_name as driver_3_display_name, 
+                d3.driver_name as driver_3_name, 
+                d3.team_name as driver_3_team
+            FROM constructor_standings cs
+            LEFT JOIN driver_standings d1 ON cs.driver_id_1 = d1.id
+            LEFT JOIN driver_standings d2 ON cs.driver_id_2 = d2.id
+            LEFT JOIN driver_standings d3 ON cs.driver_id_3 = d3.id
+            ORDER BY cs.points DESC
+        `;
+
+        db.all(query, [], (err, rows) => {
+            if (err) {
+                res.status(500).json({ error: err.message });
+                return;
+            }
+            res.json(rows);
+        });
+    });
 });
 
 // Get constructor standing by id
 app.get('/api/constructor-standings/:id', (req, res) => {
-  db.get('SELECT * FROM constructor_standings WHERE id = ?', [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (!row) {
-      return res.status(404).json({ error: 'Constructor standing not found' });
-    }
-    res.json(row);
-  });
+    const query = `
+        SELECT cs.*, 
+            d1.display_name as driver_1_display_name, 
+            d1.driver_name as driver_1_name, 
+            d1.team_name as driver_1_team,
+            d2.display_name as driver_2_display_name, 
+            d2.driver_name as driver_2_name, 
+            d2.team_name as driver_2_team,
+            d3.display_name as driver_3_display_name, 
+            d3.driver_name as driver_3_name, 
+            d3.team_name as driver_3_team
+        FROM constructor_standings cs
+        LEFT JOIN driver_standings d1 ON cs.driver_id_1 = d1.id
+        LEFT JOIN driver_standings d2 ON cs.driver_id_2 = d2.id
+        LEFT JOIN driver_standings d3 ON cs.driver_id_3 = d3.id
+        WHERE cs.id = ?
+    `;
+
+    db.get(query, [req.params.id], (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (!row) {
+            return res.status(404).json({ error: 'Constructor standing not found' });
+        }
+        res.json(row);
+    });
 });
 
 // Add a new constructor standing
 app.post('/api/constructor-standings', (req, res) => {
-  const { constructor_name, points, driver_name_1, driver_name_2, driver_name_3 } = req.body;
-  
-  if (!constructor_name || points === undefined) {
-    return res.status(400).json({ error: 'Please provide constructor_name and points' });
-  }
-  
-  db.run(`INSERT INTO constructor_standings (constructor_name, points, driver_name_1, driver_name_2, driver_name_3) VALUES (?, ?, ?, ?, ?)`,
-    [constructor_name, points, driver_name_1 || null, driver_name_2 || null, driver_name_3 || null],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.status(201).json({
-        id: this.lastID,
-        constructor_name,
-        points,
-        driver_name_1,
-        driver_name_2,
-        driver_name_3
-      });
+    const { constructor_name, points, driver_id_1, driver_id_2, driver_id_3 } = req.body;
+    db.run(`
+        INSERT INTO constructor_standings (constructor_name, points, driver_id_1, driver_id_2, driver_id_3)
+        VALUES (?, ?, ?, ?, ?)
+    `, [constructor_name, points, driver_id_1, driver_id_2, driver_id_3], function(err) {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json({ id: this.lastID });
     });
 });
 
 // Update a constructor standing
 app.put('/api/constructor-standings/:id', (req, res) => {
-  const { constructor_name, points, driver_name_1, driver_name_2, driver_name_3 } = req.body;
-  
-  if (!constructor_name || points === undefined) {
-    return res.status(400).json({ error: 'Please provide constructor_name and points' });
-  }
-  
-  db.run(`UPDATE constructor_standings SET constructor_name = ?, points = ?, driver_name_1 = ?, driver_name_2 = ?, driver_name_3 = ? WHERE id = ?`,
-    [constructor_name, points, driver_name_1 || null, driver_name_2 || null, driver_name_3 || null, req.params.id],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Constructor standing not found' });
-      }
-      res.json({
-        id: parseInt(req.params.id),
-        constructor_name,
-        points,
-        driver_name_1,
-        driver_name_2,
-        driver_name_3
-      });
-    });
+    const { constructor_name, points, driver_id_1, driver_id_2, driver_id_3 } = req.body;
+    
+    // Convert driver IDs to integers or null
+    const driverId1 = driver_id_1 ? parseInt(driver_id_1) : null;
+    const driverId2 = driver_id_2 ? parseInt(driver_id_2) : null;
+    const driverId3 = driver_id_3 ? parseInt(driver_id_3) : null;
+    
+    db.run(
+        `UPDATE constructor_standings 
+         SET constructor_name = ?, 
+             points = ?, 
+             driver_id_1 = ?, 
+             driver_id_2 = ?, 
+             driver_id_3 = ? 
+         WHERE id = ?`,
+        [constructor_name, points, driverId1, driverId2, driverId3, req.params.id],
+        function(err) {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Constructor standing not found' });
+            }
+            // Return the updated data
+            db.get(
+                `SELECT cs.*, 
+                    d1.display_name as driver_1_display_name, d1.driver_name as driver_1_name,
+                    d2.display_name as driver_2_display_name, d2.driver_name as driver_2_name,
+                    d3.display_name as driver_3_display_name, d3.driver_name as driver_3_name
+                FROM constructor_standings cs
+                LEFT JOIN driver_standings d1 ON cs.driver_id_1 = d1.id
+                LEFT JOIN driver_standings d2 ON cs.driver_id_2 = d2.id
+                LEFT JOIN driver_standings d3 ON cs.driver_id_3 = d3.id
+                WHERE cs.id = ?`,
+                [req.params.id],
+                (err, row) => {
+                    if (err) {
+                        return res.status(500).json({ error: err.message });
+                    }
+                    res.json(row);
+                }
+            );
+        }
+    );
 });
 
 // Delete a constructor standing
