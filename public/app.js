@@ -1915,6 +1915,88 @@ function initializeWidgets() {
     initializeNextRaceWidgets();
     initializeDriverWidgets();
     initializeConstructorWidgets();
+
+    // Initialize driver standings widgets
+    fetch('/api/driver-standings')
+        .then(response => response.json())
+        .then(drivers => {
+            console.log('Driver standings data:', drivers);
+            updateDriverStandingsWidgets(drivers);
+        })
+        .catch(error => {
+            console.error('Error loading driver standings:', error);
+            showAlert('Error loading driver standings', 'danger');
+        });
+
+    // Initialize constructor standings widgets
+    fetch('/api/constructor-standings')
+        .then(response => response.json())
+        .then(constructors => {
+            console.log('Constructor standings data:', constructors);
+            updateConstructorStandingsWidgets(constructors);
+        })
+        .catch(error => {
+            console.error('Error loading constructor standings:', error);
+            showAlert('Error loading constructor standings', 'danger');
+        });
+}
+
+// Add this function to initialize constructor standings widgets
+function updateConstructorStandingsWidgets(constructors) {
+    const smallWidget = document.getElementById('constructor-standings-small');
+    const mediumWidget = document.getElementById('constructor-standings-medium');
+    const largeWidget = document.getElementById('constructor-standings-large');
+
+    if (!constructors || constructors.length === 0) {
+        const loadingHtml = '<div class="widget-loading">Loading standings...</div>';
+        smallWidget.innerHTML = loadingHtml;
+        mediumWidget.innerHTML = loadingHtml;
+        largeWidget.innerHTML = loadingHtml;
+        return;
+    }
+
+    // Sort constructors by points
+    const sortedConstructors = [...constructors].sort((a, b) => b.points - a.points);
+
+    // Small widget - top 5 only
+    smallWidget.innerHTML = `
+        <div class="standings-list">
+            ${sortedConstructors.slice(0, 5).map((constructor, index) => `
+                <div class="standings-item">
+                    <span class="position">${index + 1}</span>
+                    <span class="name">${constructor.constructor_name}</span>
+                    <span class="points">${constructor.points}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    // Medium and large widgets - all constructors in two columns
+    const fullStandingsHtml = `
+        <div class="standings-columns">
+            <div class="standings-list">
+                ${sortedConstructors.slice(0, 5).map((constructor, index) => `
+                    <div class="standings-item">
+                        <span class="position">${index + 1}</span>
+                        <span class="name">${constructor.constructor_name}</span>
+                        <span class="points">${constructor.points}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="standings-list">
+                ${sortedConstructors.slice(5).map((constructor, index) => `
+                    <div class="standings-item">
+                        <span class="position">${index + 6}</span>
+                        <span class="name">${constructor.constructor_name}</span>
+                        <span class="points">${constructor.points}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    mediumWidget.innerHTML = fullStandingsHtml;
+    largeWidget.innerHTML = fullStandingsHtml;
 }
 
 // Initialize next race widgets with different sizes
@@ -2104,7 +2186,7 @@ function updateAllNextRaceWidgets(raceData) {
                     <div class="race-dates">${dateRange}</div>
                     <div class="race-countdown">${nextSession.name} in ${nextSession.countdown}</div>
                     <div class="next-sessions">
-                        ${getUpcomingSessionsList(raceData, 3)}
+                        ${getUpcomingSessionsList(raceData, 8)}
                     </div>
                 `;
                 break;
@@ -3224,3 +3306,61 @@ document.addEventListener('DOMContentLoaded', function() {
         openModal('constructor-standing-modal');
     });
 });
+
+// Add this function to initialize driver standings widgets
+function updateDriverStandingsWidgets(drivers) {
+    const smallWidget = document.getElementById('driver-standings-small');
+    const mediumWidget = document.getElementById('driver-standings-medium');
+    const largeWidget = document.getElementById('driver-standings-large');
+
+    if (!drivers || drivers.length === 0) {
+        const loadingHtml = '<div class="widget-loading">Loading standings...</div>';
+        smallWidget.innerHTML = loadingHtml;
+        mediumWidget.innerHTML = loadingHtml;
+        largeWidget.innerHTML = loadingHtml;
+        return;
+    }
+
+    // Sort drivers by points
+    const sortedDrivers = [...drivers].sort((a, b) => b.points - a.points);
+
+    // Small widget - top 5 only
+    smallWidget.innerHTML = `
+        <div class="standings-list">
+            ${sortedDrivers.slice(0, 5).map((driver, index) => `
+                <div class="standings-item">
+                    <span class="position">${index + 1}</span>
+                    <span class="name">${driver.display_name}</span>
+                    <span class="points">${driver.points}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    // Medium and large widgets - all drivers in two columns
+    const fullStandingsHtml = `
+        <div class="standings-columns">
+            <div class="standings-list">
+                ${sortedDrivers.slice(0, 10).map((driver, index) => `
+                    <div class="standings-item">
+                        <span class="position">${index + 1}</span>
+                        <span class="name">${driver.display_name}</span>
+                        <span class="points">${driver.points}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="standings-list">
+                ${sortedDrivers.slice(10).map((driver, index) => `
+                    <div class="standings-item">
+                        <span class="position">${index + 11}</span>
+                        <span class="name">${driver.display_name}</span>
+                        <span class="points">${driver.points}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    mediumWidget.innerHTML = fullStandingsHtml;
+    largeWidget.innerHTML = fullStandingsHtml;
+}
