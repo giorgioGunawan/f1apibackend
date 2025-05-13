@@ -1034,6 +1034,17 @@
         .widget-lockscreen-rect .race-countdown {
             font-weight: 500;
         }
+
+        .dev-notice {
+            font-size: 0.75em;
+            background-color: rgba(220, 53, 69, 0.1);  /* Bootstrap danger color with opacity */
+            color: #dc3545;  /* Bootstrap danger color */
+            padding: 6px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            line-height: 1.2;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -1303,7 +1314,13 @@
             <!-- Live Race Section -->
             <div id="live-race" class="section">
                 <div class="page-header">
-                    <h2>Live Race</h2>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <h2>Live Race</h2>
+                        <div class="dev-notice">
+                            Pausing development on this as this may not pass review<br>
+                            FIA do not allow external apps to broadcast live results
+                        </div>
+                    </div>
                     <div>
                         <button id="add-live-race-entry-btn" class="btn btn-primary">Add Entry</button>
                         <button id="clear-live-race-btn" class="btn btn-danger">Clear All</button>
