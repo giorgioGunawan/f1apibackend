@@ -1594,13 +1594,14 @@
                                 <th>Round</th>
                                 <th>Name</th>
                                 <th>Location</th>
+                                <th>Short Name</th>
                                 <th>Race Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="5">Loading races...</td>
+                                <td colspan="6">Loading races...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1772,6 +1773,10 @@
                         <option value="">-- Race not completed --</option>
                         <!-- Driver options will be populated dynamically -->
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="race-shortname">Short Name</label>
+                    <input type="text" id="race-shortname" class="form-control" placeholder="Enter short name">
                 </div>
                 <div class="form-buttons">
                     <button type="button" class="btn" id="race-cancel-btn">Cancel</button>

@@ -157,15 +157,17 @@ app.post('/api/races', (req, res) => {
 
 // Update a race
 app.put('/api/races/:id', (req, res) => {
-  const { 
+  const raceId = req.params.id;
+  const {
     round,
-    name, 
-    location, 
-    datetime_fp1, 
-    datetime_fp2, 
-    datetime_fp3, 
-    datetime_sprint, 
-    datetime_qualifying, 
+    name,
+    location,
+    shortname,
+    datetime_fp1,
+    datetime_fp2,
+    datetime_fp3,
+    datetime_sprint,
+    datetime_qualifying,
     datetime_race,
     first_place,
     second_place,
@@ -176,58 +178,50 @@ app.put('/api/races/:id', (req, res) => {
     return res.status(400).json({ error: 'Please provide name, location, and race datetime at minimum' });
   }
   
-  db.run(`UPDATE races SET 
-            round = ?,
-            name = ?, 
-            location = ?, 
-            datetime_fp1 = ?, 
-            datetime_fp2 = ?, 
-            datetime_fp3 = ?, 
-            datetime_sprint = ?, 
-            datetime_qualifying = ?, 
-            datetime_race = ?,
-            first_place = ?,
-            second_place = ?,
-            third_place = ?
-          WHERE id = ?`,
-    [
-      round || null,
-      name, 
-      location, 
-      datetime_fp1 || null, 
-      datetime_fp2 || null, 
-      datetime_fp3 || null, 
-      datetime_sprint || null, 
-      datetime_qualifying || null, 
-      datetime_race,
-      first_place || null,
-      second_place || null,
-      third_place || null,
-      req.params.id
-    ],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Race not found' });
-      }
-      res.json({
-        id: parseInt(req.params.id),
-        round,
-        name,
-        location,
-        datetime_fp1,
-        datetime_fp2,
-        datetime_fp3,
-        datetime_sprint,
-        datetime_qualifying,
-        datetime_race,
-        first_place,
-        second_place,
-        third_place
-      });
-    });
+  const query = `
+    UPDATE races
+    SET
+        round = ?,
+        name = ?,
+        location = ?,
+        shortname = ?,
+        datetime_fp1 = ?,
+        datetime_fp2 = ?,
+        datetime_fp3 = ?,
+        datetime_sprint = ?,
+        datetime_qualifying = ?,
+        datetime_race = ?,
+        first_place = ?,
+        second_place = ?,
+        third_place = ?
+    WHERE id = ?
+  `;
+
+  const params = [
+    round,
+    name,
+    location,
+    shortname,
+    datetime_fp1,
+    datetime_fp2,
+    datetime_fp3,
+    datetime_sprint,
+    datetime_qualifying,
+    datetime_race,
+    first_place,
+    second_place,
+    third_place,
+    raceId
+  ];
+
+  db.run(query, params, function(err) {
+    if (err) {
+      console.error('Error updating race:', err.message);
+      res.status(500).json({ error: 'Failed to update race' });
+    } else {
+      res.json({ message: 'Race updated successfully' });
+    }
+  });
 });
 
 // Delete a race

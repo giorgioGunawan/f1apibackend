@@ -499,6 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>${race.round || 'N/A'}</td>
                         <td>${race.name}</td>
                         <td>${race.location}</td>
+                        <td>${race.shortname || 'N/A'}</td>
                         <td>${formatDateTime(race.datetime_race)}</td>
                         <td>
                             <div class="action-buttons">
@@ -1154,6 +1155,7 @@ document.addEventListener('DOMContentLoaded', function() {
             round: document.getElementById('race-round').value,
             name: document.getElementById('race-name').value,
             location: document.getElementById('race-location').value,
+            shortname: document.getElementById('race-shortname').value, // Ensure this line is present
             
             // Convert local datetime to UTC timestamps
             datetime_fp1: localDateTimeToUTCTimestamp(document.getElementById('race-fp1-date').value),
@@ -1169,7 +1171,7 @@ document.addEventListener('DOMContentLoaded', function() {
             third_place: document.getElementById('race-third').value || null
         };
         
-        console.log('Submitting race data:', race);
+        console.log('Submitting race data:', race); // Add this line to debug
         
         // API endpoint and method
         const url = isEdit ? `/api/races/${id}` : '/api/races';
