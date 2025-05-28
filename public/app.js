@@ -1142,26 +1142,26 @@ document.addEventListener('DOMContentLoaded', function() {
         event.preventDefault();
         
         const id = document.getElementById('race-id').value;
-        const data = {
-            round: parseInt(document.getElementById('race-round').value),
-            name: document.getElementById('race-name').value,
-            location: document.getElementById('race-location').value,
-            shortname: document.getElementById('race-shortname').value,
-            fp1_datetime: timestampFromInput(document.getElementById('race-fp1-date').value),
-            fp1_datetime_end: timestampFromInput(document.getElementById('race-fp1-date-end').value),
-            fp2_datetime: timestampFromInput(document.getElementById('race-fp2-date').value),
-            fp2_datetime_end: timestampFromInput(document.getElementById('race-fp2-date-end').value),
-            fp3_datetime: timestampFromInput(document.getElementById('race-fp3-date').value),
-            fp3_datetime_end: timestampFromInput(document.getElementById('race-fp3-date-end').value),
-            sprint_datetime: timestampFromInput(document.getElementById('race-sprint-date').value),
-            sprint_datetime_end: timestampFromInput(document.getElementById('race-sprint-date-end').value),
-            qualifying_datetime: timestampFromInput(document.getElementById('race-qualifying-date').value),
-            qualifying_datetime_end: timestampFromInput(document.getElementById('race-qualifying-date-end').value),
-            race_datetime: timestampFromInput(document.getElementById('race-race-date').value),
-            race_datetime_end: timestampFromInput(document.getElementById('race-race-date-end').value),
-            first_place_driver_id: document.getElementById('race-first').value || null,
-            second_place_driver_id: document.getElementById('race-second').value || null,
-            third_place_driver_id: document.getElementById('race-third').value || null
+        const formData = {
+          round: document.getElementById('race-round').value,
+          name: document.getElementById('race-name').value,
+          location: document.getElementById('race-location').value,
+          shortname: document.getElementById('race-shortname').value,
+          datetime_fp1: timestampFromInput(document.getElementById('race-fp1-date').value),
+          datetime_fp2: timestampFromInput(document.getElementById('race-fp2-date').value),
+          datetime_fp3: timestampFromInput(document.getElementById('race-fp3-date').value),
+          datetime_sprint: timestampFromInput(document.getElementById('race-sprint-date').value),
+          datetime_qualifying: timestampFromInput(document.getElementById('race-qualifying-date').value),
+          datetime_race: timestampFromInput(document.getElementById('race-race-date').value),
+          datetime_fp1_end: timestampFromInput(document.getElementById('race-fp1-date-end').value),
+          datetime_fp2_end: timestampFromInput(document.getElementById('race-fp2-date-end').value),
+          datetime_fp3_end: timestampFromInput(document.getElementById('race-fp3-date-end').value),
+          datetime_sprint_end: timestampFromInput(document.getElementById('race-sprint-date-end').value),
+          datetime_qualifying_end: timestampFromInput(document.getElementById('race-qualifying-date-end').value),
+          datetime_race_end: timestampFromInput(document.getElementById('race-race-date-end').value),
+          first_place_driver_id: document.getElementById('race-first').value || null,
+          second_place_driver_id: document.getElementById('race-second').value || null,
+          third_place_driver_id: document.getElementById('race-third').value || null
         };
 
         const method = id ? 'PUT' : 'POST';
@@ -1172,7 +1172,7 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify(formData)
         })
         .then(response => response.json())
         .then(() => {
@@ -1189,31 +1189,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to populate race form for editing
     function populateRaceForm(race) {
         document.getElementById('race-id').value = race.id;
-        document.getElementById('race-round').value = race.round;
+        document.getElementById('race-round').value = race.round || '';
         document.getElementById('race-name').value = race.name;
         document.getElementById('race-location').value = race.location;
         document.getElementById('race-shortname').value = race.shortname || '';
-        
-        // Set start times
-        if (race.fp1_datetime) document.getElementById('race-fp1-date').value = formatDateTimeForInput(race.fp1_datetime);
-        if (race.fp2_datetime) document.getElementById('race-fp2-date').value = formatDateTimeForInput(race.fp2_datetime);
-        if (race.fp3_datetime) document.getElementById('race-fp3-date').value = formatDateTimeForInput(race.fp3_datetime);
-        if (race.sprint_datetime) document.getElementById('race-sprint-date').value = formatDateTimeForInput(race.sprint_datetime);
-        if (race.qualifying_datetime) document.getElementById('race-qualifying-date').value = formatDateTimeForInput(race.qualifying_datetime);
-        if (race.race_datetime) document.getElementById('race-race-date').value = formatDateTimeForInput(race.race_datetime);
-        
-        // Set end times
-        if (race.fp1_datetime_end) document.getElementById('race-fp1-date-end').value = formatDateTimeForInput(race.fp1_datetime_end);
-        if (race.fp2_datetime_end) document.getElementById('race-fp2-date-end').value = formatDateTimeForInput(race.fp2_datetime_end);
-        if (race.fp3_datetime_end) document.getElementById('race-fp3-date-end').value = formatDateTimeForInput(race.fp3_datetime_end);
-        if (race.sprint_datetime_end) document.getElementById('race-sprint-date-end').value = formatDateTimeForInput(race.sprint_datetime_end);
-        if (race.qualifying_datetime_end) document.getElementById('race-qualifying-date-end').value = formatDateTimeForInput(race.qualifying_datetime_end);
-        if (race.race_datetime_end) document.getElementById('race-race-date-end').value = formatDateTimeForInput(race.race_datetime_end);
 
-        // Set podium positions
-        if (race.first_place_driver_id) document.getElementById('race-first').value = race.first_place_driver_id;
-        if (race.second_place_driver_id) document.getElementById('race-second').value = race.second_place_driver_id;
-        if (race.third_place_driver_id) document.getElementById('race-third').value = race.third_place_driver_id;
+        if (race.datetime_fp1) document.getElementById('race-fp1-date').value = utcTimestampToLocalDateTime(race.datetime_fp1);
+        if (race.datetime_fp2) document.getElementById('race-fp2-date').value = utcTimestampToLocalDateTime(race.datetime_fp2);
+        if (race.datetime_fp3) document.getElementById('race-fp3-date').value = utcTimestampToLocalDateTime(race.datetime_fp3);
+        if (race.datetime_sprint) document.getElementById('race-sprint-date').value = utcTimestampToLocalDateTime(race.datetime_sprint);
+        if (race.datetime_qualifying) document.getElementById('race-qualifying-date').value = utcTimestampToLocalDateTime(race.datetime_qualifying);
+        if (race.datetime_race) document.getElementById('race-race-date').value = utcTimestampToLocalDateTime(race.datetime_race);
+
+        if (race.datetime_fp1_end) document.getElementById('race-fp1-date-end').value = utcTimestampToLocalDateTime(race.datetime_fp1_end);
+        if (race.datetime_fp2_end) document.getElementById('race-fp2-date-end').value = utcTimestampToLocalDateTime(race.datetime_fp2_end);
+        if (race.datetime_fp3_end) document.getElementById('race-fp3-date-end').value = utcTimestampToLocalDateTime(race.datetime_fp3_end);
+        if (race.datetime_sprint_end) document.getElementById('race-sprint-date-end').value = utcTimestampToLocalDateTime(race.datetime_sprint_end);
+        if (race.datetime_qualifying_end) document.getElementById('race-qualifying-date-end').value = utcTimestampToLocalDateTime(race.datetime_qualifying_end);
+        if (race.datetime_race_end) document.getElementById('race-race-date-end').value = utcTimestampToLocalDateTime(race.datetime_race_end);
+
+        setSelectValue('race-first', race.first_place_driver_id);
+        setSelectValue('race-second', race.second_place_driver_id);
+        setSelectValue('race-third', race.third_place_driver_id);
     }
 
     // Add event listener for form submission

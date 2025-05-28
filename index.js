@@ -111,64 +111,41 @@ app.post('/api/races', (req, res) => {
   if (!name || !location || !datetime_race) {
     return res.status(400).json({ error: 'Please provide name, location, and race datetime at minimum' });
   }
-  
-  db.run(`INSERT INTO races (
-            round,
-            name, 
-            location,
-            shortname,
-            datetime_fp1, 
-            datetime_fp2, 
-            datetime_fp3, 
-            datetime_sprint, 
-            datetime_qualifying, 
-            datetime_race,
-            datetime_fp1_end,
-            datetime_fp2_end,
-            datetime_fp3_end,
-            datetime_sprint_end,
-            datetime_qualifying_end,
-            datetime_race_end,
-            first_place_driver_id,
-            second_place_driver_id,
-            third_place_driver_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      round || null,
-      name, 
-      location,
-      shortname || null,
-      datetime_fp1 || null, 
-      datetime_fp2 || null, 
-      datetime_fp3 || null, 
-      datetime_sprint || null, 
-      datetime_qualifying || null, 
-      datetime_race,
-      datetime_fp1_end || null,
-      datetime_fp2_end || null,
-      datetime_fp3_end || null,
-      datetime_sprint_end || null,
-      datetime_qualifying_end || null,
-      datetime_race_end || null,
-      first_place_driver_id || null,
-      second_place_driver_id || null,
-      third_place_driver_id || null
-    ],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.status(201).json({
-        id: this.lastID,
+
+  // First get the driver names from driver_standings
+  const driverPromises = [
+    first_place_driver_id ? new Promise((resolve, reject) => {
+      db.get('SELECT driver_name FROM driver_standings WHERE id = ?', [first_place_driver_id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.driver_name : null);
+      });
+    }) : Promise.resolve(null),
+    second_place_driver_id ? new Promise((resolve, reject) => {
+      db.get('SELECT driver_name FROM driver_standings WHERE id = ?', [second_place_driver_id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.driver_name : null);
+      });
+    }) : Promise.resolve(null),
+    third_place_driver_id ? new Promise((resolve, reject) => {
+      db.get('SELECT driver_name FROM driver_standings WHERE id = ?', [third_place_driver_id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.driver_name : null);
+      });
+    }) : Promise.resolve(null)
+  ];
+
+  Promise.all(driverPromises)
+    .then(([first_place, second_place, third_place]) => {
+      db.run(`INSERT INTO races (
         round,
-        name,
+        name, 
         location,
         shortname,
-        datetime_fp1,
-        datetime_fp2,
-        datetime_fp3,
-        datetime_sprint,
-        datetime_qualifying,
+        datetime_fp1, 
+        datetime_fp2, 
+        datetime_fp3, 
+        datetime_sprint, 
+        datetime_qualifying, 
         datetime_race,
         datetime_fp1_end,
         datetime_fp2_end,
@@ -176,10 +153,61 @@ app.post('/api/races', (req, res) => {
         datetime_sprint_end,
         datetime_qualifying_end,
         datetime_race_end,
-        first_place_driver_id,
-        second_place_driver_id,
-        third_place_driver_id
+        first_place,
+        second_place,
+        third_place
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        round || null,
+        name, 
+        location,
+        shortname || null,
+        datetime_fp1 || null, 
+        datetime_fp2 || null, 
+        datetime_fp3 || null, 
+        datetime_sprint || null, 
+        datetime_qualifying || null, 
+        datetime_race,
+        datetime_fp1_end || null,
+        datetime_fp2_end || null,
+        datetime_fp3_end || null,
+        datetime_sprint_end || null,
+        datetime_qualifying_end || null,
+        datetime_race_end || null,
+        first_place,
+        second_place,
+        third_place
+      ],
+      function(err) {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({
+          id: this.lastID,
+          round,
+          name,
+          location,
+          shortname,
+          datetime_fp1,
+          datetime_fp2,
+          datetime_fp3,
+          datetime_sprint,
+          datetime_qualifying,
+          datetime_race,
+          datetime_fp1_end,
+          datetime_fp2_end,
+          datetime_fp3_end,
+          datetime_sprint_end,
+          datetime_qualifying_end,
+          datetime_race_end,
+          first_place,
+          second_place,
+          third_place
+        });
       });
+    })
+    .catch(err => {
+      res.status(500).json({ error: err.message });
     });
 });
 
@@ -212,85 +240,111 @@ app.put('/api/races/:id', (req, res) => {
     return res.status(400).json({ error: 'Please provide name, location, and race datetime at minimum' });
   }
   
-  const query = `
-    UPDATE races
-    SET
-        round = ?,
-        name = ?,
-        location = ?,
-        shortname = ?,
-        datetime_fp1 = ?,
-        datetime_fp2 = ?,
-        datetime_fp3 = ?,
-        datetime_sprint = ?,
-        datetime_qualifying = ?,
-        datetime_race = ?,
-        datetime_fp1_end = ?,
-        datetime_fp2_end = ?,
-        datetime_fp3_end = ?,
-        datetime_sprint_end = ?,
-        datetime_qualifying_end = ?,
-        datetime_race_end = ?,
-        first_place_driver_id = ?,
-        second_place_driver_id = ?,
-        third_place_driver_id = ?
-    WHERE id = ?
-  `;
-
-  const params = [
-    round || null,
-    name,
-    location,
-    shortname || null,
-    datetime_fp1 || null,
-    datetime_fp2 || null,
-    datetime_fp3 || null,
-    datetime_sprint || null,
-    datetime_qualifying || null,
-    datetime_race,
-    datetime_fp1_end || null,
-    datetime_fp2_end || null,
-    datetime_fp3_end || null,
-    datetime_sprint_end || null,
-    datetime_qualifying_end || null,
-    datetime_race_end || null,
-    first_place_driver_id || null,
-    second_place_driver_id || null,
-    third_place_driver_id || null,
-    raceId
+  // First get the driver names from driver_standings
+  const driverPromises = [
+    first_place_driver_id ? new Promise((resolve, reject) => {
+      db.get('SELECT driver_name FROM driver_standings WHERE id = ?', [first_place_driver_id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.driver_name : null);
+      });
+    }) : Promise.resolve(null),
+    second_place_driver_id ? new Promise((resolve, reject) => {
+      db.get('SELECT driver_name FROM driver_standings WHERE id = ?', [second_place_driver_id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.driver_name : null);
+      });
+    }) : Promise.resolve(null),
+    third_place_driver_id ? new Promise((resolve, reject) => {
+      db.get('SELECT driver_name FROM driver_standings WHERE id = ?', [third_place_driver_id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.driver_name : null);
+      });
+    }) : Promise.resolve(null)
   ];
 
-  db.run(query, params, function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Race not found' });
-    }
-    res.json({
-      id: raceId,
-      round,
-      name,
-      location,
-      shortname,
-      datetime_fp1,
-      datetime_fp2,
-      datetime_fp3,
-      datetime_sprint,
-      datetime_qualifying,
-      datetime_race,
-      datetime_fp1_end,
-      datetime_fp2_end,
-      datetime_fp3_end,
-      datetime_sprint_end,
-      datetime_qualifying_end,
-      datetime_race_end,
-      first_place_driver_id,
-      second_place_driver_id,
-      third_place_driver_id,
-      changes: this.changes
+  Promise.all(driverPromises)
+    .then(([first_place, second_place, third_place]) => {
+      const query = `
+        UPDATE races SET
+          round = ?,
+          name = ?,
+          location = ?,
+          shortname = ?,
+          datetime_fp1 = ?,
+          datetime_fp2 = ?,
+          datetime_fp3 = ?,
+          datetime_sprint = ?,
+          datetime_qualifying = ?,
+          datetime_race = ?,
+          datetime_fp1_end = ?,
+          datetime_fp2_end = ?,
+          datetime_fp3_end = ?,
+          datetime_sprint_end = ?,
+          datetime_qualifying_end = ?,
+          datetime_race_end = ?,
+          first_place = ?,
+          second_place = ?,
+          third_place = ?
+        WHERE id = ?
+      `;
+
+      const params = [
+        round || null,
+        name,
+        location,
+        shortname || null,
+        datetime_fp1 || null,
+        datetime_fp2 || null,
+        datetime_fp3 || null,
+        datetime_sprint || null,
+        datetime_qualifying || null,
+        datetime_race,
+        datetime_fp1_end || null,
+        datetime_fp2_end || null,
+        datetime_fp3_end || null,
+        datetime_sprint_end || null,
+        datetime_qualifying_end || null,
+        datetime_race_end || null,
+        first_place,
+        second_place,
+        third_place,
+        raceId
+      ];
+
+      db.run(query, params, function(err) {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'Race not found' });
+        }
+        res.json({
+          id: raceId,
+          round,
+          name,
+          location,
+          shortname,
+          datetime_fp1,
+          datetime_fp2,
+          datetime_fp3,
+          datetime_sprint,
+          datetime_qualifying,
+          datetime_race,
+          datetime_fp1_end,
+          datetime_fp2_end,
+          datetime_fp3_end,
+          datetime_sprint_end,
+          datetime_qualifying_end,
+          datetime_race_end,
+          first_place,
+          second_place,
+          third_place
+        });
+      });
+    })
+    .catch(err => {
+      res.status(500).json({ error: err.message });
     });
-  });
 });
 
 // Delete a race
