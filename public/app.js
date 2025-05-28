@@ -1048,82 +1048,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Edit race
-    function editRace(id) {
-        console.log('Editing race with ID:', id);
-        
-        fetch(`/api/races/${id}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+    function editRace(raceId) {
+        populateDriverDropdowns(); // Ensure this is called before setting values
+        fetch(`/api/races/${raceId}`)
+            .then(response => response.json())
             .then(race => {
-                console.log('Fetched race data:', race);
-                
-                document.getElementById('race-form-title').textContent = 'Edit Race';
-                document.getElementById('race-id').value = race.id;
-                document.getElementById('race-round').value = race.round;
-                document.getElementById('race-name').value = race.name;
-                document.getElementById('race-location').value = race.location;
-                
-                // Convert UTC timestamps to local datetime for form inputs
+                document.getElementById('race-id').value = raceId;
+                document.getElementById('race-round').value = race.round || '';
+                document.getElementById('race-name').value = race.name || '';
+                document.getElementById('race-location').value = race.location || '';
+                document.getElementById('race-shortname').value = race.shortname || ''; // Ensure this line is present
                 document.getElementById('race-fp1-date').value = utcTimestampToLocalDateTime(race.datetime_fp1);
                 document.getElementById('race-fp2-date').value = utcTimestampToLocalDateTime(race.datetime_fp2);
                 document.getElementById('race-fp3-date').value = utcTimestampToLocalDateTime(race.datetime_fp3);
                 document.getElementById('race-sprint-date').value = utcTimestampToLocalDateTime(race.datetime_sprint);
                 document.getElementById('race-qualifying-date').value = utcTimestampToLocalDateTime(race.datetime_qualifying);
                 document.getElementById('race-race-date').value = utcTimestampToLocalDateTime(race.datetime_race);
+                document.getElementById('race-first').value = race.first_place || '';
+                document.getElementById('race-second').value = race.second_place || '';
+                document.getElementById('race-third').value = race.third_place || '';
                 
                 // Open the modal
                 openModal('race-modal');
-                
-                // Fetch drivers and populate dropdowns
-                return fetch('/api/driver-standings');
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(drivers => {
-                console.log('Fetched drivers for dropdowns');
-                
-                // Sort drivers alphabetically by name
-                drivers.sort((a, b) => a.driver_name.localeCompare(b.driver_name));
-                
-                // Populate race podium dropdowns
-                populateDriverDropdowns('race-first', drivers);
-                populateDriverDropdowns('race-second', drivers);
-                populateDriverDropdowns('race-third', drivers);
-                
-                // Fetch the race data again to ensure we have the latest
-                return fetch(`/api/races/${id}`);
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(race => {
-                console.log('Setting podium selections:', {
-                    first: race.first_place,
-                    second: race.second_place,
-                    third: race.third_place
-                });
-                
-                // Set the selected values
-                setTimeout(() => {
-                    setSelectValue('race-first', race.first_place);
-                    setSelectValue('race-second', race.second_place);
-                    setSelectValue('race-third', race.third_place);
-                }, 100);
             })
             .catch(error => {
-                console.error('Error in editRace:', error);
-                alert('Error editing race: ' + error.message);
+                console.error('Error fetching race details:', error);
+                showAlert('Error loading race details', 'danger');
             });
     }
 
@@ -3184,19 +3134,28 @@ function populateDriverDropdowns() {
     fetch('/api/driver-standings')
         .then(response => response.json())
         .then(drivers => {
-            const dropdowns = ['driver-id-1', 'driver-id-2', 'driver-id-3'];
-            dropdowns.forEach(id => {
-                const select = document.getElementById(id);
-                select.innerHTML = '<option value="">-- Select Driver --</option>';
-                drivers.forEach(driver => {
-                    const option = document.createElement('option');
-                    option.value = driver.id;
-                    option.textContent = `${driver.display_name || driver.driver_name} (${driver.team_name})`;
-                    select.appendChild(option);
-                });
+            const firstSelect = document.getElementById('race-first');
+            const secondSelect = document.getElementById('race-second');
+            const thirdSelect = document.getElementById('race-third');
+            
+            // Clear existing options
+            firstSelect.innerHTML = '<option value="">-- Race not completed --</option>';
+            secondSelect.innerHTML = '<option value="">-- Race not completed --</option>';
+            thirdSelect.innerHTML = '<option value="">-- Race not completed --</option>';
+            
+            // Populate options
+            drivers.forEach(driver => {
+                const option = document.createElement('option');
+                option.value = driver.id;
+                option.textContent = driver.display_name || driver.driver_name;
+                firstSelect.appendChild(option.cloneNode(true));
+                secondSelect.appendChild(option.cloneNode(true));
+                thirdSelect.appendChild(option.cloneNode(true));
             });
         })
-        .catch(error => console.error('Error loading drivers:', error));
+        .catch(error => {
+            console.error('Error loading drivers:', error);
+        });
 }
 
 // Add this function to handle the save
