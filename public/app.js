@@ -600,9 +600,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <p><strong>Short Name:</strong> ${race.shortname || 'N/A'}</p>
                                         <div class="podium-results">
                                             <h4>Podium Results</h4>
-                                            <p><strong>1st Place:</strong> ${race.first_place_driver_id || 'Not yet determined'}</p>
-                                            <p><strong>2nd Place:</strong> ${race.second_place_driver_id || 'Not yet determined'}</p>
-                                            <p><strong>3rd Place:</strong> ${race.third_place_driver_id || 'Not yet determined'}</p>
+                                            <p><strong>1st Place:</strong> ${race.first_place || 'Not yet determined'}</p>
+                                            <p><strong>2nd Place:</strong> ${race.second_place || 'Not yet determined'}</p>
+                                            <p><strong>3rd Place:</strong> ${race.third_place || 'Not yet determined'}</p>
                                         </div>
                                     </div>
                                     
