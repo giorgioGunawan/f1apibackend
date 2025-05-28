@@ -1388,9 +1388,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.innerHTML = `
                         <td>${constructor.constructor_name}</td>
                         <td>${constructor.points}</td>
-                        <td>${constructor.driver_1_display_name || constructor.driver_1_name || 'TBA'}</td>
-                        <td>${constructor.driver_2_display_name || constructor.driver_2_name || 'TBA'}</td>
-                        <td>${constructor.driver_3_display_name || constructor.driver_3_name || 'TBA'}</td>
+                        <td>${constructor.driver_1_display_name || constructor.driver_1_name || '-'}</td>
+                        <td>${constructor.driver_2_display_name || constructor.driver_2_name || '-'}</td>
+                        <td>${constructor.driver_3_display_name || constructor.driver_3_name || '-'}</td>
                         <td>
                             <button class="btn btn-sm btn-primary edit-constructor-btn" data-id="${constructor.id}">Edit</button>
                             <button class="btn btn-sm btn-danger delete-constructor-btn" data-id="${constructor.id}">Delete</button>
@@ -1403,7 +1403,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelectorAll('.edit-constructor-btn').forEach(button => {
                     button.addEventListener('click', function() {
                         const id = this.getAttribute('data-id');
-                        populateDriverDropdowns();
+                        populateConstructorDriverDropdowns(); // Call this first
                         setTimeout(() => {
                             loadConstructorStandingDetails(id);
                         }, 100);
@@ -1434,21 +1434,14 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('constructor-standing-form').reset();
             document.getElementById('constructor-standing-id').value = '';
             document.getElementById('constructor-standing-form-title').textContent = 'Add Constructor Standing';
-            populateDriverDropdowns();
+            populateConstructorDriverDropdowns();
             openModal('constructor-standing-modal');
         });
 
-        // Form submit handler
-        const form = document.getElementById('constructor-standing-form');
-        if (!form) {
-            console.error('Constructor standing form not found!');
-            return;
-        }
-
-        form.addEventListener('submit', function(e) {
-            e.preventDefault(); // Make sure this is actually preventing the form submission
-            console.log('Form submitted'); // Debug log
-
+        // Add save button click handler
+        document.getElementById('save-constructor-btn').addEventListener('click', function() {
+            console.log('Save constructor button clicked');
+            
             const id = document.getElementById('constructor-standing-id').value;
             const constructorName = document.getElementById('constructor-name').value;
             const points = document.getElementById('constructor-points').value;
@@ -1456,15 +1449,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const driverId2 = document.getElementById('driver-id-2').value;
             const driverId3 = document.getElementById('driver-id-3').value;
 
-            // Debug log
-            console.log('Form data:', {
-                id,
-                constructorName,
-                points,
-                driverId1,
-                driverId2,
-                driverId3
-            });
+            if (!constructorName || !points) {
+                showAlert('Please fill in all required fields', 'danger');
+                return;
+            }
 
             const data = {
                 constructor_name: constructorName,
@@ -1474,10 +1462,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 driver_id_3: driverId3 || null
             };
             
+            console.log('Saving constructor data:', data);
+            
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/constructor-standings/${id}` : '/api/constructor-standings';
-            
-            console.log('Sending request:', { method, url, data }); // Debug log
 
             fetch(url, {
                 method: method,
@@ -1487,12 +1475,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(data)
             })
             .then(response => {
-                console.log('Response received:', response); // Debug log
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             })
-            .then(responseData => {
-                console.log('Success response:', responseData); // Debug log
+            .then(() => {
                 closeModal('constructor-standing-modal');
                 loadConstructorStandings();
                 showAlert(id ? 'Constructor standing updated successfully' : 'Constructor standing added successfully');
@@ -1520,21 +1506,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadConstructorStandingDetails(id) {
+        // First populate the dropdowns
+        populateConstructorDriverDropdowns();
+        
+        // Then fetch and populate the constructor data
         fetch(`/api/constructor-standings/${id}`)
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             })
             .then(data => {
-                document.getElementById('constructor-standing-id').value = data.id;
-                document.getElementById('constructor-name').value = data.constructor_name;
-                document.getElementById('constructor-points').value = data.points;
-                document.getElementById('driver-id-1').value = data.driver_id_1 || '';
-                document.getElementById('driver-id-2').value = data.driver_id_2 || '';
-                document.getElementById('driver-id-3').value = data.driver_id_3 || '';
-                
-                document.getElementById('constructor-standing-form-title').textContent = 'Edit Constructor Standing';
-                openModal('constructor-standing-modal');
+                // Wait a bit for the dropdowns to be populated
+                setTimeout(() => {
+                    document.getElementById('constructor-standing-id').value = data.id;
+                    document.getElementById('constructor-name').value = data.constructor_name;
+                    document.getElementById('constructor-points').value = data.points;
+                    
+                    // Set the driver selections
+                    if (document.getElementById('driver-id-1')) {
+                        document.getElementById('driver-id-1').value = data.driver_id_1 || '';
+                    }
+                    if (document.getElementById('driver-id-2')) {
+                        document.getElementById('driver-id-2').value = data.driver_id_2 || '';
+                    }
+                    if (document.getElementById('driver-id-3')) {
+                        document.getElementById('driver-id-3').value = data.driver_id_3 || '';
+                    }
+                    
+                    document.getElementById('constructor-standing-form-title').textContent = 'Edit Constructor Standing';
+                    openModal('constructor-standing-modal');
+                }, 500); // Give more time for the dropdowns to populate
             })
             .catch(error => {
                 console.error('Error loading constructor standing details:', error);
@@ -1858,6 +1859,73 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ... existing code ...
+
+    // Inside the `document.addEventListener('DOMContentLoaded', function() {` block
+    populateDriverDropdowns('driver-id-1', driversData);
+    populateDriverDropdowns('driver-id-2', driversData);
+    populateDriverDropdowns('driver-id-3', driversData);
+    populateConstructorDriverDropdowns();
+
+    // Add Constructor button click handler
+    document.getElementById('add-constructor-standing-btn').addEventListener('click', function() {
+        document.getElementById('constructor-standing-form').reset();
+        document.getElementById('constructor-standing-id').value = '';
+        document.getElementById('constructor-standing-form-title').textContent = 'Add Constructor Standing';
+        populateConstructorDriverDropdowns();
+        openModal('constructor-standing-modal');
+    });
+
+    // Add Constructor form submit handler
+    const constructorForm = document.getElementById('constructor-standing-form');
+    if (constructorForm) {
+        constructorForm.onsubmit = function(event) {
+            event.preventDefault(); // Prevent form from submitting normally
+            console.log('Constructor form submitted');
+            
+            const id = document.getElementById('constructor-standing-id').value;
+            const constructorName = document.getElementById('constructor-name').value;
+            const points = document.getElementById('constructor-points').value;
+            const driverId1 = document.getElementById('driver-id-1').value;
+            const driverId2 = document.getElementById('driver-id-2').value;
+            const driverId3 = document.getElementById('driver-id-3').value;
+
+            const data = {
+                constructor_name: constructorName,
+                points: parseInt(points),
+                driver_id_1: driverId1 || null,
+                driver_id_2: driverId2 || null,
+                driver_id_3: driverId3 || null
+            };
+            
+            console.log('Saving constructor data:', data);
+            
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/constructor-standings/${id}` : '/api/constructor-standings';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(() => {
+                closeModal('constructor-standing-modal');
+                loadConstructorStandings();
+                showAlert(id ? 'Constructor standing updated successfully' : 'Constructor standing added successfully');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Error saving constructor standing: ' + error.message, 'danger');
+            });
+            
+            return false; // Prevent form from submitting normally
+        };
+    }
 });
 
 // ... existing code ...
@@ -1884,7 +1952,7 @@ function initializeWidgets() {
     fetch('/api/constructor-standings')
         .then(response => response.json())
         .then(constructors => {
-            console.log('Constructor standings data:', constructors);
+            console.log('Constructor standings data:', constructors); // Add this line to debug
             updateConstructorStandingsWidgets(constructors);
         })
         .catch(error => {
@@ -1927,7 +1995,7 @@ function updateConstructorStandingsWidgets(constructors) {
     const fullStandingsHtml = `
         <div class="standings-columns">
             <div class="standings-list">
-                ${sortedConstructors.slice(0, 5).map((constructor, index) => `
+                ${sortedConstructors.slice(0, Math.ceil(sortedConstructors.length / 2)).map((constructor, index) => `
                     <div class="standings-item">
                         <span class="position">${index + 1}</span>
                         <span class="name">${constructor.constructor_name}</span>
@@ -1936,9 +2004,9 @@ function updateConstructorStandingsWidgets(constructors) {
                 `).join('')}
             </div>
             <div class="standings-list">
-                ${sortedConstructors.slice(5).map((constructor, index) => `
+                ${sortedConstructors.slice(Math.ceil(sortedConstructors.length / 2)).map((constructor, index) => `
                     <div class="standings-item">
-                        <span class="position">${index + 6}</span>
+                        <span class="position">${index + Math.ceil(sortedConstructors.length / 2) + 1}</span>
                         <span class="name">${constructor.constructor_name}</span>
                         <span class="points">${constructor.points}</span>
                     </div>
@@ -3192,61 +3260,10 @@ function saveConstructorStanding(event) {
         if (!response.ok) throw new Error('Network response was not ok');
         return response.json();
     })
-    .then(responseData => {
-        // First reload the data
-        return fetch('/api/constructor-standings')
-            .then(response => response.json())
-            .then(constructors => {
-                // Update the table
-                const tbody = document.querySelector('#constructor-standings-table tbody');
-                tbody.innerHTML = '';
-                constructors.forEach((constructor, index) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${constructor.constructor_name}</td>
-                        <td>${constructor.points}</td>
-                        <td>${constructor.driver_1_display_name || constructor.driver_1_name || 'TBA'}</td>
-                        <td>${constructor.driver_2_display_name || constructor.driver_2_name || 'TBA'}</td>
-                        <td>${constructor.driver_3_display_name || constructor.driver_3_name || 'TBA'}</td>
-                        <td>
-                            <button class="btn btn-sm btn-primary edit-constructor-btn" data-id="${constructor.id}">Edit</button>
-                            <button class="btn btn-sm btn-danger delete-constructor-btn" data-id="${constructor.id}">Delete</button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-
-                // Re-attach event listeners
-                document.querySelectorAll('.edit-constructor-btn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const id = this.getAttribute('data-id');
-                        populateDriverDropdowns();
-                        setTimeout(() => {
-                            loadConstructorStandingDetails(id);
-                        }, 100);
-                    });
-                });
-
-                document.querySelectorAll('.delete-constructor-btn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        if (confirm('Are you sure you want to delete this constructor standing?')) {
-                            deleteConstructorStanding(this.getAttribute('data-id'));
-                        }
-                    });
-                });
-
-                // Close the modal
-                const modal = document.getElementById('constructor-standing-modal');
-                if (modal) {
-                    modal.style.display = 'none';
-                }
-
-                // Show success message
-                showAlert(
-                    id ? 'Constructor standing updated successfully!' : 'Constructor standing added successfully!',
-                    'success'
-                );
-            });
+    .then(() => {
+        closeModal('constructor-standing-modal');
+        loadConstructorStandings();
+        showAlert(id ? 'Constructor standing updated successfully' : 'Constructor standing added successfully');
     })
     .catch(error => {
         console.error('Error:', error);
@@ -3263,7 +3280,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('constructor-standing-form').reset();
         document.getElementById('constructor-standing-id').value = '';
         document.getElementById('constructor-standing-form-title').textContent = 'Add Constructor Standing';
-        populateDriverDropdowns();
+        populateConstructorDriverDropdowns();
         openModal('constructor-standing-modal');
     });
 });
@@ -3324,4 +3341,47 @@ function updateDriverStandingsWidgets(drivers) {
 
     mediumWidget.innerHTML = fullStandingsHtml;
     largeWidget.innerHTML = fullStandingsHtml;
+}
+
+function populateConstructorDriverDropdowns() {
+    console.log('Fetching drivers for constructor dropdowns...');
+    fetch('/api/driver-standings')
+        .then(response => {
+            console.log('Driver standings response:', response);
+            return response.json();
+        })
+        .then(drivers => {
+            console.log('Drivers data received:', drivers);
+            const driverSelects = [
+                document.getElementById('driver-id-1'),
+                document.getElementById('driver-id-2'),
+                document.getElementById('driver-id-3')
+            ];
+            
+            driverSelects.forEach(select => {
+                if (!select) {
+                    console.error('Select element not found');
+                    return;
+                }
+                // Clear existing options
+                select.innerHTML = '<option value="">Select Driver</option>';
+                
+                // Populate options
+                drivers.forEach(driver => {
+                    const option = document.createElement('option');
+                    option.value = driver.id;
+                    option.textContent = driver.display_name || driver.driver_name;
+                    select.appendChild(option);
+                });
+                console.log(`Populated select ${select.id} with ${drivers.length} drivers`);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading drivers for constructor dropdowns:', error);
+        });
+}
+
+function openConstructorStandingModal() {
+    populateConstructorDriverDropdowns(); // Call this function to populate dropdowns
+    // Open the modal logic here
 }
