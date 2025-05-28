@@ -565,6 +565,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const sprintTime = formatDateTime(race.datetime_sprint);
                 const qualifyingTime = formatDateTime(race.datetime_qualifying);
                 const raceTime = formatDateTime(race.datetime_race);
+
+                // Format all session end times
+                const fp1EndTime = formatDateTime(race.datetime_fp1_end);
+                const fp2EndTime = formatDateTime(race.datetime_fp2_end);
+                const fp3EndTime = formatDateTime(race.datetime_fp3_end);
+                const sprintEndTime = formatDateTime(race.datetime_sprint_end);
+                const qualifyingEndTime = formatDateTime(race.datetime_qualifying_end);
+                const raceEndTime = formatDateTime(race.datetime_race_end);
                 
                 // Create modal content
                 modal.innerHTML = `
@@ -589,23 +597,47 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <h3>Race Information</h3>
                                         <p><strong>Round:</strong> ${race.round || 'N/A'}</p>
                                         <p><strong>Location:</strong> ${race.location}</p>
+                                        <p><strong>Short Name:</strong> ${race.shortname || 'N/A'}</p>
+                                        <div class="podium-results">
+                                            <h4>Podium Results</h4>
+                                            <p><strong>1st Place:</strong> ${race.first_place_driver_id || 'Not yet determined'}</p>
+                                            <p><strong>2nd Place:</strong> ${race.second_place_driver_id || 'Not yet determined'}</p>
+                                            <p><strong>3rd Place:</strong> ${race.third_place_driver_id || 'Not yet determined'}</p>
+                                        </div>
                                     </div>
                                     
                                     <div class="detail-section">
-                                        <h3>Session Times (UTC)</h3>
-                                        <p><strong>Practice 1:</strong> ${fp1Time}</p>
-                                        <p><strong>Practice 2:</strong> ${fp2Time}</p>
-                                        <p><strong>Practice 3:</strong> ${fp3Time}</p>
-                                        <p><strong>Sprint:</strong> ${sprintTime}</p>
-                                        <p><strong>Qualifying:</strong> ${qualifyingTime}</p>
-                                        <p><strong>Race:</strong> ${raceTime}</p>
-                                    </div>
-                                    
-                                    <div class="detail-section">
-                                        <h3>Podium Results</h3>
-                                        <p><strong>1st Place:</strong> ${race.first_place || 'Not yet determined'}</p>
-                                        <p><strong>2nd Place:</strong> ${race.second_place || 'Not yet determined'}</p>
-                                        <p><strong>3rd Place:</strong> ${race.third_place || 'Not yet determined'}</p>
+                                        <h3>Session Times (Local Time)</h3>
+                                        <div class="session-time">
+                                            <h4>Practice 1</h4>
+                                            <p><strong>Start:</strong> ${fp1Time || 'Not scheduled'}</p>
+                                            <p><strong>End:</strong> ${fp1EndTime || 'Not scheduled'}</p>
+                                        </div>
+                                        <div class="session-time">
+                                            <h4>Practice 2</h4>
+                                            <p><strong>Start:</strong> ${fp2Time || 'Not scheduled'}</p>
+                                            <p><strong>End:</strong> ${fp2EndTime || 'Not scheduled'}</p>
+                                        </div>
+                                        <div class="session-time">
+                                            <h4>Practice 3</h4>
+                                            <p><strong>Start:</strong> ${fp3Time || 'Not scheduled'}</p>
+                                            <p><strong>End:</strong> ${fp3EndTime || 'Not scheduled'}</p>
+                                        </div>
+                                        <div class="session-time">
+                                            <h4>Sprint</h4>
+                                            <p><strong>Start:</strong> ${sprintTime || 'Not scheduled'}</p>
+                                            <p><strong>End:</strong> ${sprintEndTime || 'Not scheduled'}</p>
+                                        </div>
+                                        <div class="session-time">
+                                            <h4>Qualifying</h4>
+                                            <p><strong>Start:</strong> ${qualifyingTime || 'Not scheduled'}</p>
+                                            <p><strong>End:</strong> ${qualifyingEndTime || 'Not scheduled'}</p>
+                                        </div>
+                                        <div class="session-time">
+                                            <h4>Race</h4>
+                                            <p><strong>Start:</strong> ${raceTime || 'Not scheduled'}</p>
+                                            <p><strong>End:</strong> ${raceEndTime || 'Not scheduled'}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1057,16 +1089,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('race-round').value = race.round || '';
                 document.getElementById('race-name').value = race.name || '';
                 document.getElementById('race-location').value = race.location || '';
-                document.getElementById('race-shortname').value = race.shortname || ''; // Ensure this line is present
+                document.getElementById('race-shortname').value = race.shortname || '';
+
+                // Set start times
                 document.getElementById('race-fp1-date').value = utcTimestampToLocalDateTime(race.datetime_fp1);
                 document.getElementById('race-fp2-date').value = utcTimestampToLocalDateTime(race.datetime_fp2);
                 document.getElementById('race-fp3-date').value = utcTimestampToLocalDateTime(race.datetime_fp3);
                 document.getElementById('race-sprint-date').value = utcTimestampToLocalDateTime(race.datetime_sprint);
                 document.getElementById('race-qualifying-date').value = utcTimestampToLocalDateTime(race.datetime_qualifying);
                 document.getElementById('race-race-date').value = utcTimestampToLocalDateTime(race.datetime_race);
-                document.getElementById('race-first').value = race.first_place || '';
-                document.getElementById('race-second').value = race.second_place || '';
-                document.getElementById('race-third').value = race.third_place || '';
+
+                // Set end times
+                document.getElementById('race-fp1-date-end').value = utcTimestampToLocalDateTime(race.datetime_fp1_end);
+                document.getElementById('race-fp2-date-end').value = utcTimestampToLocalDateTime(race.datetime_fp2_end);
+                document.getElementById('race-fp3-date-end').value = utcTimestampToLocalDateTime(race.datetime_fp3_end);
+                document.getElementById('race-sprint-date-end').value = utcTimestampToLocalDateTime(race.datetime_sprint_end);
+                document.getElementById('race-qualifying-date-end').value = utcTimestampToLocalDateTime(race.datetime_qualifying_end);
+                document.getElementById('race-race-date-end').value = utcTimestampToLocalDateTime(race.datetime_race_end);
+
+                // Set podium positions
+                document.getElementById('race-first').value = race.first_place_driver_id || '';
+                document.getElementById('race-second').value = race.second_place_driver_id || '';
+                document.getElementById('race-third').value = race.third_place_driver_id || '';
                 
                 // Open the modal
                 openModal('race-modal');

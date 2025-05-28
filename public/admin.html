@@ -1161,42 +1161,49 @@
             overflow-y: auto;
         }
 
-        .session-times {
-            border: 1px solid var(--medium-gray);
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
+        .session-time {
             background-color: var(--light-gray);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
         }
 
-        .session-times h3 {
-            color: var(--secondary-color);
+        .session-time h4 {
+            color: var(--primary-color);
+            margin: 0 0 10px 0;
             font-size: 16px;
-            margin: 15px 0 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid var(--medium-gray);
         }
 
-        .session-times h3:first-child {
-            margin-top: 0;
+        .session-time p {
+            margin: 5px 0;
+            font-size: 14px;
         }
 
-        .session-times .form-group {
-            margin-bottom: 10px;
+        .session-time p strong {
             display: inline-block;
-            width: calc(50% - 10px);
-            vertical-align: top;
+            width: 60px;
         }
 
-        .session-times .form-group:nth-child(odd) {
-            margin-right: 20px;
+        .podium-results {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid var(--medium-gray);
         }
 
-        @media (max-width: 768px) {
-            .session-times .form-group {
-                width: 100%;
-                margin-right: 0 !important;
-            }
+        .podium-results h4 {
+            color: var(--primary-color);
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+
+        .podium-results p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .podium-results p strong {
+            display: inline-block;
+            width: 80px;
         }
     </style>
 </head>
