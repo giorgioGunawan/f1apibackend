@@ -89,16 +89,23 @@ app.post('/api/races', (req, res) => {
   const { 
     round,
     name, 
-    location, 
+    location,
+    shortname,
     datetime_fp1, 
     datetime_fp2, 
     datetime_fp3, 
     datetime_sprint, 
     datetime_qualifying, 
     datetime_race,
-    first_place,
-    second_place,
-    third_place
+    datetime_fp1_end,
+    datetime_fp2_end,
+    datetime_fp3_end,
+    datetime_sprint_end,
+    datetime_qualifying_end,
+    datetime_race_end,
+    first_place_driver_id,
+    second_place_driver_id,
+    third_place_driver_id
   } = req.body;
   
   if (!name || !location || !datetime_race) {
@@ -108,30 +115,44 @@ app.post('/api/races', (req, res) => {
   db.run(`INSERT INTO races (
             round,
             name, 
-            location, 
+            location,
+            shortname,
             datetime_fp1, 
             datetime_fp2, 
             datetime_fp3, 
             datetime_sprint, 
             datetime_qualifying, 
             datetime_race,
-            first_place,
-            second_place,
-            third_place
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            datetime_fp1_end,
+            datetime_fp2_end,
+            datetime_fp3_end,
+            datetime_sprint_end,
+            datetime_qualifying_end,
+            datetime_race_end,
+            first_place_driver_id,
+            second_place_driver_id,
+            third_place_driver_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       round || null,
       name, 
-      location, 
+      location,
+      shortname || null,
       datetime_fp1 || null, 
       datetime_fp2 || null, 
       datetime_fp3 || null, 
       datetime_sprint || null, 
       datetime_qualifying || null, 
       datetime_race,
-      first_place || null,
-      second_place || null,
-      third_place || null
+      datetime_fp1_end || null,
+      datetime_fp2_end || null,
+      datetime_fp3_end || null,
+      datetime_sprint_end || null,
+      datetime_qualifying_end || null,
+      datetime_race_end || null,
+      first_place_driver_id || null,
+      second_place_driver_id || null,
+      third_place_driver_id || null
     ],
     function(err) {
       if (err) {
@@ -142,15 +163,22 @@ app.post('/api/races', (req, res) => {
         round,
         name,
         location,
+        shortname,
         datetime_fp1,
         datetime_fp2,
         datetime_fp3,
         datetime_sprint,
         datetime_qualifying,
         datetime_race,
-        first_place,
-        second_place,
-        third_place
+        datetime_fp1_end,
+        datetime_fp2_end,
+        datetime_fp3_end,
+        datetime_sprint_end,
+        datetime_qualifying_end,
+        datetime_race_end,
+        first_place_driver_id,
+        second_place_driver_id,
+        third_place_driver_id
       });
     });
 });
@@ -169,9 +197,15 @@ app.put('/api/races/:id', (req, res) => {
     datetime_sprint,
     datetime_qualifying,
     datetime_race,
-    first_place,
-    second_place,
-    third_place
+    datetime_fp1_end,
+    datetime_fp2_end,
+    datetime_fp3_end,
+    datetime_sprint_end,
+    datetime_qualifying_end,
+    datetime_race_end,
+    first_place_driver_id,
+    second_place_driver_id,
+    third_place_driver_id
   } = req.body;
   
   if (!name || !location || !datetime_race) {
@@ -191,36 +225,71 @@ app.put('/api/races/:id', (req, res) => {
         datetime_sprint = ?,
         datetime_qualifying = ?,
         datetime_race = ?,
-        first_place = ?,
-        second_place = ?,
-        third_place = ?
+        datetime_fp1_end = ?,
+        datetime_fp2_end = ?,
+        datetime_fp3_end = ?,
+        datetime_sprint_end = ?,
+        datetime_qualifying_end = ?,
+        datetime_race_end = ?,
+        first_place_driver_id = ?,
+        second_place_driver_id = ?,
+        third_place_driver_id = ?
     WHERE id = ?
   `;
 
   const params = [
-    round,
+    round || null,
     name,
     location,
-    shortname,
-    datetime_fp1,
-    datetime_fp2,
-    datetime_fp3,
-    datetime_sprint,
-    datetime_qualifying,
+    shortname || null,
+    datetime_fp1 || null,
+    datetime_fp2 || null,
+    datetime_fp3 || null,
+    datetime_sprint || null,
+    datetime_qualifying || null,
     datetime_race,
-    first_place,
-    second_place,
-    third_place,
+    datetime_fp1_end || null,
+    datetime_fp2_end || null,
+    datetime_fp3_end || null,
+    datetime_sprint_end || null,
+    datetime_qualifying_end || null,
+    datetime_race_end || null,
+    first_place_driver_id || null,
+    second_place_driver_id || null,
+    third_place_driver_id || null,
     raceId
   ];
 
   db.run(query, params, function(err) {
     if (err) {
-      console.error('Error updating race:', err.message);
-      res.status(500).json({ error: 'Failed to update race' });
-    } else {
-      res.json({ message: 'Race updated successfully' });
+      return res.status(500).json({ error: err.message });
     }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Race not found' });
+    }
+    res.json({
+      id: raceId,
+      round,
+      name,
+      location,
+      shortname,
+      datetime_fp1,
+      datetime_fp2,
+      datetime_fp3,
+      datetime_sprint,
+      datetime_qualifying,
+      datetime_race,
+      datetime_fp1_end,
+      datetime_fp2_end,
+      datetime_fp3_end,
+      datetime_sprint_end,
+      datetime_qualifying_end,
+      datetime_race_end,
+      first_place_driver_id,
+      second_place_driver_id,
+      third_place_driver_id,
+      changes: this.changes
+    });
   });
 });
 

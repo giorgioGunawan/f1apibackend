@@ -1093,64 +1093,87 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle race form submission
-    document.getElementById('race-form').addEventListener('submit', function(e) {
-        e.preventDefault();
+    // Function to handle race form submission
+    function handleRaceFormSubmit(event) {
+        event.preventDefault();
         
         const id = document.getElementById('race-id').value;
-        const isEdit = id !== '';
-        
-        // Get form values
-        const race = {
-            round: document.getElementById('race-round').value,
+        const data = {
+            round: parseInt(document.getElementById('race-round').value),
             name: document.getElementById('race-name').value,
             location: document.getElementById('race-location').value,
-            shortname: document.getElementById('race-shortname').value, // Ensure this line is present
-            
-            // Convert local datetime to UTC timestamps
-            datetime_fp1: localDateTimeToUTCTimestamp(document.getElementById('race-fp1-date').value),
-            datetime_fp2: localDateTimeToUTCTimestamp(document.getElementById('race-fp2-date').value),
-            datetime_fp3: localDateTimeToUTCTimestamp(document.getElementById('race-fp3-date').value),
-            datetime_sprint: localDateTimeToUTCTimestamp(document.getElementById('race-sprint-date').value),
-            datetime_qualifying: localDateTimeToUTCTimestamp(document.getElementById('race-qualifying-date').value),
-            datetime_race: localDateTimeToUTCTimestamp(document.getElementById('race-race-date').value),
-            
-            // Get podium values from dropdowns
-            first_place: document.getElementById('race-first').value || null,
-            second_place: document.getElementById('race-second').value || null,
-            third_place: document.getElementById('race-third').value || null
+            shortname: document.getElementById('race-shortname').value,
+            fp1_datetime: timestampFromInput(document.getElementById('race-fp1-date').value),
+            fp1_datetime_end: timestampFromInput(document.getElementById('race-fp1-date-end').value),
+            fp2_datetime: timestampFromInput(document.getElementById('race-fp2-date').value),
+            fp2_datetime_end: timestampFromInput(document.getElementById('race-fp2-date-end').value),
+            fp3_datetime: timestampFromInput(document.getElementById('race-fp3-date').value),
+            fp3_datetime_end: timestampFromInput(document.getElementById('race-fp3-date-end').value),
+            sprint_datetime: timestampFromInput(document.getElementById('race-sprint-date').value),
+            sprint_datetime_end: timestampFromInput(document.getElementById('race-sprint-date-end').value),
+            qualifying_datetime: timestampFromInput(document.getElementById('race-qualifying-date').value),
+            qualifying_datetime_end: timestampFromInput(document.getElementById('race-qualifying-date-end').value),
+            race_datetime: timestampFromInput(document.getElementById('race-race-date').value),
+            race_datetime_end: timestampFromInput(document.getElementById('race-race-date-end').value),
+            first_place_driver_id: document.getElementById('race-first').value || null,
+            second_place_driver_id: document.getElementById('race-second').value || null,
+            third_place_driver_id: document.getElementById('race-third').value || null
         };
-        
-        console.log('Submitting race data:', race); // Add this line to debug
-        
-        // API endpoint and method
-        const url = isEdit ? `/api/races/${id}` : '/api/races';
-        const method = isEdit ? 'PUT' : 'POST';
-        
-        // Send request
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/races/${id}` : '/api/races';
+
         fetch(url, {
             method: method,
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(race)
+            body: JSON.stringify(data)
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Race saved successfully:', data);
+        .then(response => response.json())
+        .then(() => {
             closeModal('race-modal');
             loadRaces();
+            showAlert(id ? 'Race updated successfully' : 'Race added successfully');
         })
         .catch(error => {
-            console.error('Error saving race:', error);
-            alert('Error saving race: ' + error.message);
+            console.error('Error:', error);
+            showAlert('Error saving race', 'danger');
         });
-    });
+    }
+
+    // Function to populate race form for editing
+    function populateRaceForm(race) {
+        document.getElementById('race-id').value = race.id;
+        document.getElementById('race-round').value = race.round;
+        document.getElementById('race-name').value = race.name;
+        document.getElementById('race-location').value = race.location;
+        document.getElementById('race-shortname').value = race.shortname || '';
+        
+        // Set start times
+        if (race.fp1_datetime) document.getElementById('race-fp1-date').value = formatDateTimeForInput(race.fp1_datetime);
+        if (race.fp2_datetime) document.getElementById('race-fp2-date').value = formatDateTimeForInput(race.fp2_datetime);
+        if (race.fp3_datetime) document.getElementById('race-fp3-date').value = formatDateTimeForInput(race.fp3_datetime);
+        if (race.sprint_datetime) document.getElementById('race-sprint-date').value = formatDateTimeForInput(race.sprint_datetime);
+        if (race.qualifying_datetime) document.getElementById('race-qualifying-date').value = formatDateTimeForInput(race.qualifying_datetime);
+        if (race.race_datetime) document.getElementById('race-race-date').value = formatDateTimeForInput(race.race_datetime);
+        
+        // Set end times
+        if (race.fp1_datetime_end) document.getElementById('race-fp1-date-end').value = formatDateTimeForInput(race.fp1_datetime_end);
+        if (race.fp2_datetime_end) document.getElementById('race-fp2-date-end').value = formatDateTimeForInput(race.fp2_datetime_end);
+        if (race.fp3_datetime_end) document.getElementById('race-fp3-date-end').value = formatDateTimeForInput(race.fp3_datetime_end);
+        if (race.sprint_datetime_end) document.getElementById('race-sprint-date-end').value = formatDateTimeForInput(race.sprint_datetime_end);
+        if (race.qualifying_datetime_end) document.getElementById('race-qualifying-date-end').value = formatDateTimeForInput(race.qualifying_datetime_end);
+        if (race.race_datetime_end) document.getElementById('race-race-date-end').value = formatDateTimeForInput(race.race_datetime_end);
+
+        // Set podium positions
+        if (race.first_place_driver_id) document.getElementById('race-first').value = race.first_place_driver_id;
+        if (race.second_place_driver_id) document.getElementById('race-second').value = race.second_place_driver_id;
+        if (race.third_place_driver_id) document.getElementById('race-third').value = race.third_place_driver_id;
+    }
+
+    // Add event listener for form submission
+    document.getElementById('race-form').addEventListener('submit', handleRaceFormSubmit);
 
     // Cancel buttons
     document.getElementById('race-cancel-btn').addEventListener('click', () => {
@@ -3238,6 +3261,12 @@ function saveConstructorStanding(event) {
     const driverId2 = document.getElementById('driver-id-2').value;
     const driverId3 = document.getElementById('driver-id-3').value;
 
+    // Validate required fields
+    if (!constructorName || !points) {
+        showAlert('Please fill in all required fields', 'danger');
+        return;
+    }
+
     const data = {
         constructor_name: constructorName,
         points: parseInt(points),
@@ -3248,6 +3277,11 @@ function saveConstructorStanding(event) {
     
     const method = id ? 'PUT' : 'POST';
     const url = id ? `/api/constructor-standings/${id}` : '/api/constructor-standings';
+
+    // Disable the form while submitting
+    const form = document.getElementById('constructor-standing-form');
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
 
     fetch(url, {
         method: method,
@@ -3261,13 +3295,62 @@ function saveConstructorStanding(event) {
         return response.json();
     })
     .then(() => {
+        // First close the modal
         closeModal('constructor-standing-modal');
-        loadConstructorStandings();
+        
+        // Then reload the data
+        return fetch('/api/constructor-standings');
+    })
+    .then(response => response.json())
+    .then(constructors => {
+        // Update the table with new data
+        const tbody = document.querySelector('#constructor-standings-table tbody');
+        tbody.innerHTML = '';
+        constructors.forEach((constructor) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${constructor.constructor_name}</td>
+                <td>${constructor.points}</td>
+                <td>${constructor.driver_1_display_name || constructor.driver_1_name || '-'}</td>
+                <td>${constructor.driver_2_display_name || constructor.driver_2_name || '-'}</td>
+                <td>${constructor.driver_3_display_name || constructor.driver_3_name || '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary edit-constructor-btn" data-id="${constructor.id}">Edit</button>
+                    <button class="btn btn-sm btn-danger delete-constructor-btn" data-id="${constructor.id}">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Re-attach event listeners to the new buttons
+        document.querySelectorAll('.edit-constructor-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const constructorId = this.getAttribute('data-id');
+                populateConstructorDriverDropdowns();
+                setTimeout(() => {
+                    loadConstructorStandingDetails(constructorId);
+                }, 100);
+            });
+        });
+
+        document.querySelectorAll('.delete-constructor-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                if (confirm('Are you sure you want to delete this constructor standing?')) {
+                    deleteConstructorStanding(this.getAttribute('data-id'));
+                }
+            });
+        });
+
+        // Show success message
         showAlert(id ? 'Constructor standing updated successfully' : 'Constructor standing added successfully');
     })
     .catch(error => {
         console.error('Error:', error);
         showAlert('Error saving constructor standing: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        // Re-enable the form
+        submitButton.disabled = false;
     });
 }
 

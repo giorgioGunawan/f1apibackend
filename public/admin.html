@@ -1160,6 +1160,44 @@
             height: 400px;     /* Reduce height since we're more compact now */
             overflow-y: auto;
         }
+
+        .session-times {
+            border: 1px solid var(--medium-gray);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background-color: var(--light-gray);
+        }
+
+        .session-times h3 {
+            color: var(--secondary-color);
+            font-size: 16px;
+            margin: 15px 0 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .session-times h3:first-child {
+            margin-top: 0;
+        }
+
+        .session-times .form-group {
+            margin-bottom: 10px;
+            display: inline-block;
+            width: calc(50% - 10px);
+            vertical-align: top;
+        }
+
+        .session-times .form-group:nth-child(odd) {
+            margin-right: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .session-times .form-group {
+                width: 100%;
+                margin-right: 0 !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1729,30 +1767,68 @@
                     <i class="fas fa-info-circle"></i> All times below are in your local timezone: <span id="local-timezone">AEDT</span>
                 </div>
                 
-                <div class="form-group">
-                    <label for="race-fp1-date">Practice 1 Date:</label>
-                    <input type="datetime-local" id="race-fp1-date" class="form-control">
+                <div class="session-times">
+                    <h3>Practice 1</h3>
+                    <div class="form-group">
+                        <label for="race-fp1-date">Start Time:</label>
+                        <input type="datetime-local" id="race-fp1-date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="race-fp1-date-end">End Time:</label>
+                        <input type="datetime-local" id="race-fp1-date-end" class="form-control">
+                    </div>
+
+                    <h3>Practice 2</h3>
+                    <div class="form-group">
+                        <label for="race-fp2-date">Start Time:</label>
+                        <input type="datetime-local" id="race-fp2-date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="race-fp2-date-end">End Time:</label>
+                        <input type="datetime-local" id="race-fp2-date-end" class="form-control">
+                    </div>
+
+                    <h3>Practice 3</h3>
+                    <div class="form-group">
+                        <label for="race-fp3-date">Start Time:</label>
+                        <input type="datetime-local" id="race-fp3-date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="race-fp3-date-end">End Time:</label>
+                        <input type="datetime-local" id="race-fp3-date-end" class="form-control">
+                    </div>
+
+                    <h3>Sprint</h3>
+                    <div class="form-group">
+                        <label for="race-sprint-date">Start Time:</label>
+                        <input type="datetime-local" id="race-sprint-date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="race-sprint-date-end">End Time:</label>
+                        <input type="datetime-local" id="race-sprint-date-end" class="form-control">
+                    </div>
+
+                    <h3>Qualifying</h3>
+                    <div class="form-group">
+                        <label for="race-qualifying-date">Start Time:</label>
+                        <input type="datetime-local" id="race-qualifying-date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="race-qualifying-date-end">End Time:</label>
+                        <input type="datetime-local" id="race-qualifying-date-end" class="form-control" required>
+                    </div>
+
+                    <h3>Race</h3>
+                    <div class="form-group">
+                        <label for="race-race-date">Start Time:</label>
+                        <input type="datetime-local" id="race-race-date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="race-race-date-end">End Time:</label>
+                        <input type="datetime-local" id="race-race-date-end" class="form-control" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="race-fp2-date">Practice 2 Date:</label>
-                    <input type="datetime-local" id="race-fp2-date" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label for="race-fp3-date">Practice 3 Date:</label>
-                    <input type="datetime-local" id="race-fp3-date" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label for="race-sprint-date">Sprint Date:</label>
-                    <input type="datetime-local" id="race-sprint-date" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label for="race-qualifying-date">Qualifying Date:</label>
-                    <input type="datetime-local" id="race-qualifying-date" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="race-race-date">Race Date:</label>
-                    <input type="datetime-local" id="race-race-date" class="form-control" required>
-                </div>
+
                 <div class="form-group">
                     <label for="race-first">First Place:</label>
                     <select id="race-first" class="form-control">
