@@ -993,6 +993,22 @@ app.delete('/api/races', (req, res) => {
   });
 });
 
+// Get all upcoming races (where race end time is in the future)
+app.get('/api/upcoming-races', (req, res) => {
+  const currentTimestamp = Math.floor(Date.now() / 1000); // Current time in Unix timestamp
+  
+  db.all(
+    'SELECT * FROM races WHERE datetime_race_end >= ? ORDER BY datetime_race ASC',
+    [currentTimestamp],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json(rows);
+    }
+  );
+});
+
 // Serve static files from the 'public' directory
 app.use(express.static('public'));
 
