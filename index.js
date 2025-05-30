@@ -1009,6 +1009,129 @@ app.get('/api/upcoming-races', (req, res) => {
   );
 });
 
+// Get latest race result with detailed winner information
+app.get('/api/latest-result', (req, res) => {
+  const currentTimestamp = Math.floor(Date.now() / 1000);
+
+  // First get the most recent completed race
+  db.get(
+    `SELECT 
+      id as race_id,
+      round,
+      name,
+      location,
+      shortname,
+      first_place,
+      second_place,
+      third_place
+    FROM races 
+    WHERE datetime_race_end < ? 
+    ORDER BY datetime_race_end DESC 
+    LIMIT 1`,
+    [currentTimestamp],
+    (err, race) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+
+      // If no completed race is found, return null values
+      if (!race) {
+        return res.json({
+          race_id: null,
+          round: null,
+          name: null,
+          location: null,
+          shortname: null,
+          first_place_winner_id: null,
+          first_place_winner_name: null,
+          first_place_winner_team: null,
+          first_place_winner_driver_number: null,
+          first_place_winner_display_name: null,
+          second_place_winner_id: null,
+          second_place_winner_name: null,
+          second_place_winner_team: null,
+          second_place_winner_driver_number: null,
+          second_place_winner_display_name: null,
+          third_place_winner_id: null,
+          third_place_winner_name: null,
+          third_place_winner_team: null,
+          third_place_winner_driver_number: null,
+          third_place_winner_display_name: null
+        });
+      }
+
+      // Get driver details for all three podium positions
+      const driverPromises = [
+        // First place
+        race.first_place ? new Promise((resolve, reject) => {
+          db.get(
+            'SELECT id, driver_name, team_name, driver_number, display_name FROM driver_standings WHERE driver_name = ?',
+            [race.first_place],
+            (err, driver) => {
+              if (err) reject(err);
+              else resolve(driver);
+            }
+          );
+        }) : Promise.resolve(null),
+        // Second place
+        race.second_place ? new Promise((resolve, reject) => {
+          db.get(
+            'SELECT id, driver_name, team_name, driver_number, display_name FROM driver_standings WHERE driver_name = ?',
+            [race.second_place],
+            (err, driver) => {
+              if (err) reject(err);
+              else resolve(driver);
+            }
+          );
+        }) : Promise.resolve(null),
+        // Third place
+        race.third_place ? new Promise((resolve, reject) => {
+          db.get(
+            'SELECT id, driver_name, team_name, driver_number, display_name FROM driver_standings WHERE driver_name = ?',
+            [race.third_place],
+            (err, driver) => {
+              if (err) reject(err);
+              else resolve(driver);
+            }
+          );
+        }) : Promise.resolve(null)
+      ];
+
+      Promise.all(driverPromises)
+        .then(([first, second, third]) => {
+          res.json({
+            race_id: race.race_id,
+            round: race.round,
+            name: race.name,
+            location: race.location,
+            shortname: race.shortname,
+            // First place details
+            first_place_winner_id: first ? first.id : null,
+            first_place_winner_name: race.first_place || null,
+            first_place_winner_team: first ? first.team_name : null,
+            first_place_winner_driver_number: first ? first.driver_number : null,
+            first_place_winner_display_name: first ? first.display_name : null,
+            // Second place details
+            second_place_winner_id: second ? second.id : null,
+            second_place_winner_name: race.second_place || null,
+            second_place_winner_team: second ? second.team_name : null,
+            second_place_winner_driver_number: second ? second.driver_number : null,
+            second_place_winner_display_name: second ? second.display_name : null,
+            // Third place details
+            third_place_winner_id: third ? third.id : null,
+            third_place_winner_name: race.third_place || null,
+            third_place_winner_team: third ? third.team_name : null,
+            third_place_winner_driver_number: third ? third.driver_number : null,
+            third_place_winner_display_name: third ? third.display_name : null
+          });
+        })
+        .catch(err => {
+          res.status(500).json({ error: err.message });
+        });
+    }
+  );
+});
+
 // Serve static files from the 'public' directory
 app.use(express.static('public'));
 
